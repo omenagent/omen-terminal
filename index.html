@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OMEN — Token Forensics Terminal</title>
+<meta name="description" content="OMEN: real-time crypto forensic and token security analysis terminal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2308090A'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F4F4F5' stroke-width='2'/%3E%3Cpath d='M16 4v6M16 22v6' stroke='%2394A3B8' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+/*
+VOICE: clinical, institutional, a forensic lab report that happens to be live.
+IDEA: a terminal readout over an architectural wireframe; every number is evidence.
+PICTURE: the verdict dashboard itself, with a full-page WebGL torus knot and terrain behind it.
+COLOUR and TYPE: obsidian/carbon grounds, hairline borders, ivory CTA; sage/amber/crimson for state only. Inter + JetBrains Mono.
+LAYOUT: ticker, nav, hero scanner, dashboard grid, agent desk, changelog + FAQ, footer.
+*/
+:root{
+  --obsidian:#08090A;--carbon:#0E1013;--carbon2:#121519;--line:#1E2229;--line2:#2A2F38;
+  --ivory:#F4F4F5;--ink:#E4E4E7;--mute:#8B93A1;--dim:#5B6370;
+  --steel:#60A5FA;--sage:#2E9E6B;--amber:#D99B26;--crimson:#C94A4A;
+  --slate:#64748B;--silver:#94A3B8;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;min-width:0}
+html{scroll-behavior:smooth;scroll-padding-top:110px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--obsidian);color:var(--ink);font:15px/1.55 var(--sans);overflow-x:clip;-webkit-font-smoothing:antialiased}
+#gl{position:fixed;inset:0;z-index:0;pointer-events:none;width:100vw;height:100vh;display:block}
+.veil{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 30%,transparent 0,rgba(8,9,10,.55) 70%,rgba(8,9,10,.85) 100%)}
+main,header,footer,.ticker{position:relative;z-index:1}
+a{color:var(--steel);text-decoration:none}a:hover{text-decoration:underline}
+.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:0 max(4vw,16px)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+
+/* ticker */
+.ticker{height:32px;border-bottom:1px solid var(--line);background:var(--obsidian);overflow:hidden;font:12px/32px var(--mono);font-variant-numeric:tabular-nums;color:var(--mute);white-space:nowrap}
+.ticker .track{display:inline-flex;gap:36px;padding-left:100%;animation:tick 60s linear infinite}
+.ticker:hover .track{animation-play-state:paused}
+@keyframes tick{to{transform:translateX(-100%)}}
+@media (prefers-reduced-motion:reduce){.ticker .track{animation:none;padding-left:16px}}
+.ticker b{color:var(--ink);font-weight:500}
+.up{color:var(--sage)}.dn{color:var(--crimson)}
+
+/* nav */
+header{position:sticky;top:0;z-index:20;background:rgba(8,9,10,.92);border-bottom:1px solid var(--line);backdrop-filter:saturate(1.1) blur(6px)}
+.nav{display:flex;align-items:center;gap:20px;height:60px}
+.logo{display:flex;align-items:center;gap:10px;color:var(--ivory);font-weight:600;letter-spacing:.18em;font-size:15px}
+.logo:hover{text-decoration:none}
+.navlinks{display:flex;gap:4px;margin-left:12px}
+.navlinks a{color:var(--mute);padding:8px 10px;font-size:14px;border-radius:4px}
+.navlinks a:hover{color:var(--ink);text-decoration:none;background:var(--carbon)}
+.spacer{flex:1}
+.kbd{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--carbon);color:var(--mute);font-size:13px}
+.kbd kbd{font:11px var(--mono);border:1px solid var(--line2);border-radius:3px;padding:1px 5px;color:var(--ink)}
+.btn{height:40px;padding:0 16px;border-radius:6px;border:1px solid var(--line2);background:var(--carbon);color:var(--ink);font-weight:500;font-size:14px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.btn:hover{border-color:var(--slate)}
+.btn.primary{background:var(--ivory);color:var(--obsidian);border-color:var(--ivory)}
+.btn.primary:hover{background:#fff}
+.btn[disabled]{opacity:.5;cursor:wait}
+@media (max-width:860px){.navlinks{display:none}.kbd span{display:none}}
+
+/* hero */
+.hero{padding:clamp(56px,9vw,120px) 0 40px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--mute);border:1px solid var(--line);padding:5px 10px;border-radius:999px;background:rgba(14,16,19,.7)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--sage);box-shadow:0 0 0 3px rgba(46,158,107,.18)}
+h1{font-size:clamp(34px,5.6vw,64px);line-height:1.03;letter-spacing:-.025em;font-weight:600;color:var(--ivory);margin:22px 0 16px;max-width:15ch;text-wrap:balance}
+.lede{font-size:17px;color:var(--mute);max-width:60ch;margin:0 0 30px}
+.scanner{display:flex;gap:8px;max-width:820px;background:rgba(14,16,19,.92);border:1px solid var(--line2);border-radius:8px;padding:6px}
+.scanner input{flex:1;height:46px;background:transparent;border:0;outline:0;padding:0 12px;font:15px var(--mono);color:var(--ivory)}
+.scanner input::placeholder{color:var(--dim)}
+.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.quick .lbl{font:12px var(--mono);color:var(--dim);margin-right:4px}
+.chip{height:34px;padding:0 12px;border:1px solid var(--line);background:rgba(14,16,19,.85);border-radius:5px;font:12px var(--mono);color:var(--ink)}
+.chip:hover{border-color:var(--slate)}
+.chip i{font-style:normal;color:var(--dim);margin-left:6px}
+.status{margin-top:12px;font:12px var(--mono);color:var(--mute);min-height:18px}
+.status.err{color:var(--crimson)}
+
+/* sections */
+section{padding:56px 0}
+.sh{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+h2{font-size:clamp(24px,3vw,34px);line-height:1.1;letter-spacing:-.02em;color:var(--ivory);margin:0;font-weight:600}
+.sub{color:var(--mute);margin:6px 0 0;max-width:62ch}
+.card{background:rgba(14,16,19,.94);border:1px solid var(--line);border-radius:8px;padding:20px}
+.ct{font-size:12px;color:var(--mute);font-weight:500;margin:0 0 14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+
+/* dashboard */
+.dash{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.6fr) minmax(0,1.15fr);gap:14px}
+@media (max-width:1080px){.dash{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.span-r{grid-column:1/-1}}
+@media (max-width:680px){.dash{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:14px;align-content:start}
+.tokhead{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+.tokicon{width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);display:grid;place-items:center;font:600 13px var(--mono);color:var(--silver);background:var(--carbon2);flex:none}
+.tokname{font-weight:600;color:var(--ivory);font-size:17px;line-height:1.2}
+.tokmeta{font:12px var(--mono);color:var(--mute);overflow-wrap:anywhere}
+.gauge{position:relative;width:100%;max-width:220px;margin:6px auto 10px;aspect-ratio:1}
+.gauge svg{width:100%;height:100%;display:block}
+.gauge .v{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.gauge .v b{display:block;font:600 clamp(44px,6vw,58px)/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--ivory)}
+.gauge .v small{font:12px var(--mono);color:var(--mute)}
+.badge{display:block;text-align:center;padding:12px;border-radius:6px;font:600 13px var(--mono);letter-spacing:.02em;border:1px solid}
+.b-safe{color:var(--sage);border-color:rgba(46,158,107,.45);background:rgba(46,158,107,.08)}
+.b-caut{color:var(--amber);border-color:rgba(217,155,38,.45);background:rgba(217,155,38,.08)}
+.b-crit{color:var(--crimson);border-color:rgba(201,74,74,.5);background:rgba(201,74,74,.09)}
+.b-idle{color:var(--mute);border-color:var(--line2)}
+.fine{font-size:12px;color:var(--dim);margin:10px 0 0}
+.deds{list-style:none;padding:0;margin:14px 0 0;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.deds li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);color:var(--mute)}
+.deds li b{color:var(--crimson);font-weight:500}
+.deds li.ok b{color:var(--sage)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{background:rgba(14,16,19,.96);padding:16px}
+.stat small{display:block;font-size:12px;color:var(--mute);margin-bottom:6px}
+.stat b{font:500 20px var(--mono);font-variant-numeric:tabular-nums;color:var(--ivory);white-space:nowrap}
+.ratio{height:10px;border-radius:3px;background:var(--crimson);overflow:hidden;display:flex}
+.ratio span{background:var(--sage);transition:width .6s}
+.rl{display:flex;justify-content:space-between;font:12px var(--mono);margin-top:8px;font-variant-numeric:tabular-nums}
+.chartbox{position:relative;height:420px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--obsidian)}
+.chartbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.chartbox .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--dim);font:12px var(--mono);text-align:center;padding:20px}
+.toggle{height:30px;padding:0 10px;border:1px solid var(--line2);background:var(--carbon2);border-radius:4px;font:12px var(--mono);color:var(--ink)}
+.checks{list-style:none;margin:0;padding:0}
+.checks li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.checks li:first-child{border-top:0}
+.checks .r{font:12px var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ic{width:16px;height:16px}
+.bar{height:8px;background:var(--carbon2);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--silver);transition:width .6s}
+.holders{list-style:none;margin:14px 0 0;padding:0;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.holders li{display:grid;grid-template-columns:22px minmax(0,1fr) 64px;gap:8px;padding:4px 0;color:var(--mute);align-items:center}
+.holders li .a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.holders li .p{text-align:right;color:var(--ink)}
+.log{height:300px;overflow-y:auto;font:12px/1.7 var(--mono);font-variant-numeric:tabular-nums;color:var(--mute);background:var(--obsidian);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.log div{white-space:pre-wrap;overflow-wrap:anywhere}
+.log .t{color:var(--dim)}.log .ok{color:var(--sage)}.log .warn{color:var(--amber)}.log .bad{color:var(--crimson)}.log .inf{color:var(--steel)}
+.skel{color:var(--dim)}
+
+/* agent desk */
+.desk{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+.desk .card:nth-child(1),.desk .card:nth-child(2),.desk .card:nth-child(3){grid-column:span 2}
+.desk .card:nth-child(4),.desk .card:nth-child(5){grid-column:span 3}
+@media (max-width:980px){.desk{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.desk .card{grid-column:span 1!important}.desk .card:nth-child(5){grid-column:1/-1!important}}
+@media (max-width:640px){.desk{grid-template-columns:minmax(0,1fr)}.desk .card{grid-column:1/-1!important}}
+.mnum{font:12px var(--mono);color:var(--dim)}
+.desk h3{margin:6px 0 8px;font-size:18px;color:var(--ivory);font-weight:600;letter-spacing:-.01em}
+.desk p{color:var(--mute);margin:0 0 14px;font-size:14px}
+.tag{display:inline-block;font:11px var(--mono);padding:2px 7px;border-radius:3px;border:1px solid var(--line2);color:var(--mute)}
+.tag.live{color:var(--sage);border-color:rgba(46,158,107,.4)}
+.tag.dev{color:var(--amber);border-color:rgba(217,155,38,.4)}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv span:nth-child(odd){color:var(--mute)}.kv span:nth-child(even){text-align:right;color:var(--ink);white-space:nowrap}
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.fields label{font-size:12px;color:var(--mute);display:grid;gap:4px}
+.fields input{height:40px;background:var(--obsidian);border:1px solid var(--line2);border-radius:5px;padding:0 10px;font:14px var(--mono);color:var(--ivory);width:100%}
+.radar{display:grid;grid-template-columns:44px minmax(0,1fr) 92px;gap:10px;align-items:center;font:12px var(--mono);font-variant-numeric:tabular-nums;padding:6px 0}
+.radar .rr{text-align:right;white-space:nowrap}
+
+/* changelog / faq */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
+.cl{list-style:none;margin:0;padding:0}
+.cl li{display:grid;grid-template-columns:86px minmax(0,1fr);gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.cl li:first-child{border-top:0;padding-top:0}
+.cl .ver{font:12px var(--mono);color:var(--silver)}
+.cl .ver small{display:block;color:var(--dim)}
+.cl b{color:var(--ivory);font-weight:500;display:block;margin-bottom:4px}
+.cl p{margin:0;color:var(--mute);font-size:14px}
+details{border-top:1px solid var(--line);padding:14px 0}
+details:first-of-type{border-top:0;padding-top:0}
+summary{cursor:pointer;color:var(--ivory);font-weight:500;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--mono);color:var(--dim)}
+details[open] summary::after{content:"−"}
+details p{color:var(--mute);margin:10px 0 0;font-size:14px}
+code{font:12.5px var(--mono);background:var(--carbon2);border:1px solid var(--line);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+
+footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--dim);font-size:13px;background:rgba(8,9,10,.9)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* modals */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(4,5,6,.72);display:none;align-items:flex-start;justify-content:center;padding:12vh 16px 16px}
+.modal.open{display:flex}
+.panel{width:100%;max-width:560px;background:var(--carbon);border:1px solid var(--line2);border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
+.cmdin{width:100%;height:54px;background:transparent;border:0;border-bottom:1px solid var(--line);outline:0;padding:0 18px;font-size:16px;color:var(--ivory)}
+.cmdlist{list-style:none;margin:0;padding:6px;max-height:50vh;overflow-y:auto}
+.cmdlist li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:6px;cursor:pointer;font-size:14px}
+.cmdlist li small{font:11px var(--mono);color:var(--dim)}
+.cmdlist li.sel{background:var(--carbon2);outline:1px solid var(--line2)}
+.cmdfoot{border-top:1px solid var(--line);padding:8px 14px;font:11px var(--mono);color:var(--dim)}
+.signin{padding:24px}
+.signin h3{margin:0 0 6px;color:var(--ivory);font-size:20px}
+.signin p{color:var(--mute);margin:0 0 18px;font-size:14px}
+.wallet{width:100%;display:flex;justify-content:space-between;align-items:center;height:52px;padding:0 16px;margin-bottom:8px;border:1px solid var(--line2);border-radius:6px;background:var(--obsidian);font-weight:500}
+.wallet:hover{border-color:var(--slate)}
+.wallet small{font:12px var(--mono);color:var(--dim)}
+.x{float:right;background:none;border:0;color:var(--mute);font-size:22px;line-height:1;width:44px;height:44px;margin:-14px -14px 0 0}
+</style>
+</head>
+<body>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
+
+<div class="ticker" aria-label="Live telemetry"><div class="track" id="ticker"><span>Connecting to DexScreener telemetry…</span></div></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#top" aria-label="OMEN home">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="10" stroke="#F4F4F5" stroke-width="1.6"/>
+        <circle cx="16" cy="16" r="4" stroke="#94A3B8" stroke-width="1.6"/>
+        <path d="M16 2v6M16 24v6M2 16h4M26 16h4" stroke="#64748B" stroke-width="1.6"/>
+      </svg>
+      OMEN
+    </a>
+    <nav class="navlinks" aria-label="Sections">
+      <a href="#scanner">Scanner</a><a href="#dashboard">Forensics</a><a href="#desk">Agent Desk</a><a href="#changelog">Changelog</a><a href="#faq">FAQ</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="kbd" id="openCmd" aria-label="Open command palette"><span>Search commands</span><kbd>⌘K</kbd></button>
+    <button class="btn primary" id="openSignin">Sign In</button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" id="scanner">
+    <div class="wrap">
+      <span class="eyebrow"><span class="dot"></span>Live · DexScreener + GoPlus Security</span>
+      <h1>Forensic verdicts on any token, before you sign.</h1>
+      <p class="lede">Paste a contract address or ticker. The OMEN Agent pulls live market structure and on-chain security flags, then scores the token on a deterministic 0–100 scale.</p>
+      <form class="scanner" id="scanForm" autocomplete="off">
+        <input id="caInput" aria-label="Contract address or ticker" placeholder="0x… contract address, Solana mint, or ticker" spellcheck="false">
+        <button class="btn primary" id="scanBtn" type="submit">Run Scan</button>
+      </form>
+      <div class="quick">
+        <span class="lbl">Quick-Scan</span>
+        <button class="chip" data-ca="0x6982508145454Ce325dDbE47a25d4ec3d2311933">PEPE<i>ETH</i></button>
+        <button class="chip" data-ca="0x532f27101965dd16442E59d40670FaF5eBB142E4">BRETT<i>BASE</i></button>
+        <button class="chip" data-ca="EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm">WIF<i>SOL</i></button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="dashboard">
+    <div class="wrap">
+      <div class="sh">
+        <div><h2>Forensic Verdict</h2><p class="sub">Every deduction is derived from a live API flag. Nothing is cached or simulated.</p></div>
+        <span class="mono" style="font-size:12px;color:var(--dim)" id="scanTime">—</span>
+      </div>
+      <div class="dash">
+        <div class="col">
+          <div class="card">
+            <div class="tokhead">
+              <div class="tokicon" id="tokIcon">—</div>
+              <div><div class="tokname" id="tokName">Awaiting scan</div><div class="tokmeta" id="tokMeta">—</div></div>
+            </div>
+            <div class="gauge">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#1E2229" stroke-width="6"/>
+                <circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="#94A3B8" stroke-width="6" stroke-linecap="butt" stroke-dasharray="326.7" stroke-dashoffset="326.7" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .8s,stroke .4s"/>
+              </svg>
+              <div class="v"><div><b id="score">—</b><small>SAFETY SCORE / 100</small></div></div>
+            </div>
+            <div class="badge b-idle" id="verdict">AWAITING SCAN</div>
+            <ul class="deds" id="deds"></ul>
+            <p class="fine">Automated heuristic from public data. Not financial advice.</p>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="stats">
+            <div class="stat"><small>Price</small><b id="sPrice">—</b></div>
+            <div class="stat"><small>24h change</small><b id="sChg">—</b></div>
+            <div class="stat"><small>Liquidity</small><b id="sLiq">—</b></div>
+            <div class="stat"><small>Volume 24h</small><b id="sVol">—</b></div>
+            <div class="stat"><small>FDV</small><b id="sFdv">—</b></div>
+            <div class="stat"><small>Holders</small><b id="sHold">—</b></div>
+          </div>
+          <div class="card">
+            <div class="ct"><span>24h buy / sell pressure</span><span class="mono" id="txTotal">—</span></div>
+            <div class="ratio"><span id="buyBar" style="width:50%"></span></div>
+            <div class="rl"><span class="up" id="buys">Buys —</span><span class="dn" id="sells">Sells —</span></div>
+          </div>
+          <div class="card">
+            <div class="ct"><span>Live chart · <span class="mono" id="pairLbl">—</span></span>
+              <span style="display:flex;gap:6px"><a class="toggle" id="dsLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Open ↗</a><button class="toggle" id="chartToggle" aria-pressed="true">Hide chart</button></span></div>
+            <div class="chartbox" id="chartBox"><div class="ph">Chart loads after the first scan.</div></div>
+          </div>
+        </div>
+
+        <div class="col span-r">
+          <div class="card">
+            <div class="ct"><span>GoPlus security checklist</span><span class="mono" id="gpChain">—</span></div>
+            <ul class="checks" id="checks"><li class="skel"><span></span><span>Awaiting scan</span><span></span></li></ul>
+          </div>
+          <div class="card">
+            <div class="ct"><span>Top 10 holder concentration</span><b class="mono" id="topPct" style="color:var(--ivory);font-size:14px">—</b></div>
+            <div class="bar"><span id="topBar" style="width:0"></span></div>
+            <ul class="holders" id="holders"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="ct"><span>Agent audit log</span><button class="toggle" id="clearLog">Clear</button></div>
+        <div class="log" id="log" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="desk">
+    <div class="wrap">
+      <div class="sh"><div><h2>Autonomous Agent Desk</h2><p class="sub">Five Agent modules share the same live scan. Modules marked live run on real data today; the rest are in development and say so.</p></div></div>
+      <div class="desk">
+        <div class="card">
+          <span class="mnum">01</span> <span class="tag live">Live</span>
+          <h3>Contract Forensics</h3>
+          <p>Bytecode-level flags from GoPlus, merged with DexScreener liquidity and holder structure into one deterministic score.</p>
+          <div class="kv" id="m1"><span>Last target</span><span>—</span></div>
+        </div>
+        <div class="card">
+          <span class="mnum">02</span> <span class="tag dev">In development</span>
+          <h3>Guarded Execution Vaults</h3>
+          <p>Non-custodial execution gated by the forensic score. Policy preview for the current target:</p>
+          <div class="kv" id="m2"><span>Execution gate</span><span>—</span></div>
+        </div>
+        <div class="card">
+          <span class="mnum">05</span> <span class="tag dev">In development</span>
+          <h3>$OMEN Utility</h3>
+          <p>$OMEN is planned as the access and priority layer for the Agent: higher scan limits, vault policy slots and API quotas. Token parameters are not final and are not published here.</p>
+          <div class="kv"><span>Status</span><span>Design phase</span><span>Contract</span><span>Not deployed</span></div>
+        </div>
+        <div class="card">
+          <span class="mnum">03</span> <span class="tag live">Live · paper</span>
+          <h3>Paper-Mode Strategy Simulator</h3>
+          <p>Size a hypothetical position against live price and liquidity. No orders are sent.</p>
+          <div class="fields">
+            <label>Size (USD)<input id="pSize" type="number" min="1" value="1000" inputmode="decimal"></label>
+            <label>Stop loss %<input id="pSl" type="number" min="1" max="99" value="15" inputmode="decimal"></label>
+            <label>Take profit %<input id="pTp" type="number" min="1" value="40" inputmode="decimal"></label>
+          </div>
+          <div class="kv" id="m3"><span>Run a scan first</span><span></span></div>
+        </div>
+        <div class="card">
+          <span class="mnum">04</span> <span class="tag live">Live</span>
+          <h3>Smart Money Radar</h3>
+          <p>Order-flow imbalance across timeframes from the pair's live transaction counts. Wallet-level attribution is in development.</p>
+          <div id="m4"><div class="radar"><span style="color:var(--dim)">—</span><span></span><span></span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap two">
+      <div class="card" id="changelog">
+        <h2 style="font-size:24px;margin-bottom:18px">Engineering Changelog</h2>
+        <ul class="cl">
+          <li><div class="ver">v0.4.0<small>Nov 2026</small></div><div><b>Paper-mode simulator and order-flow radar</b><p>Modules 03 and 04 now read live pair data: price-impact estimate from pool depth, and buy/sell imbalance across 5m, 1h, 6h and 24h.</p></div></li>
+          <li><div class="ver">v0.3.0<small>Nov 2026</small></div><div><b>Solana security path</b><p>Added the GoPlus Solana endpoint. Mint authority and transfer-fee flags map into the same scoring engine; EVM-only checks are marked N/A rather than scored.</p></div></li>
+          <li><div class="ver">v0.2.0<small>Nov 2026</small></div><div><b>Deterministic scoring engine</b><p>Fixed deduction table with an itemised breakdown on every verdict. Honeypot detection short-circuits the score to 0.</p></div></li>
+          <li><div class="ver">v0.1.0<small>Nov 2026</small></div><div><b>Terminal foundation</b><p>DexScreener ingestion with highest-liquidity pair selection, ticker fallback search, embedded chart, command palette.</p></div></li>
+        </ul>
+      </div>
+      <div class="card" id="faq">
+        <h2 style="font-size:24px;margin-bottom:18px">Technical FAQ</h2>
+        <details open><summary>Where does the data come from?</summary><p>Market data from <code>api.dexscreener.com</code> and security flags from <code>api.gopluslabs.io</code>, both called directly from your browser. There is no OMEN backend in between and no demo data.</p></details>
+        <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Not open source −25, mintable −20, proxy −15, max tax &gt;5% −15 or &gt;15% −35, liquidity &lt;$50k −20 or &lt;$10k −35, top-10 holders &gt;50% −20. ≥75 is Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
+        <details><summary>Which pair is used when a token trades in many pools?</summary><p>The pair with the highest <code>liquidity.usd</code>. Thin pools are easy to manipulate, so the deepest pool is the most honest price.</p></details>
+        <details><summary>Why do some checks show N/A on Solana?</summary><p>Proxy contracts, open-source verification and honeypot simulation are EVM concepts. On Solana the Agent scores mint authority and transfer fees instead and leaves the rest unscored.</p></details>
+        <details><summary>Does top-10 concentration include LP and burn wallets?</summary><p>Yes, it uses GoPlus' raw holder list. A pool or burn address in the top 10 can inflate the figure; check the labelled addresses below the bar.</p></details>
+        <details><summary>Does Sign In take custody of anything?</summary><p>No. It asks your wallet for its public address only. OMEN never requests a seed phrase, private key or transaction signature.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>© 2026 OMEN · Data: DexScreener, GoPlus Security</span><span>Automated analysis from public data. Not financial advice. Always verify on-chain.</span></div></footer>
+
+<div class="modal" id="cmdModal" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="panel">
+    <input class="cmdin" id="cmdIn" placeholder="Type a command or paste a contract address…" spellcheck="false">
+    <ul class="cmdlist" id="cmdList"></ul>
+    <div class="cmdfoot">↑↓ navigate · ↵ run · esc close</div>
+  </div>
+</div>
+
+<div class="modal" id="signModal" role="dialog" aria-modal="true" aria-labelledby="signTitle">
+  <div class="panel signin">
+    <button class="x" id="closeSign" aria-label="Close">×</button>
+    <h3 id="signTitle">Sign In</h3>
+    <p>Non-custodial. OMEN reads your public address only; it never asks for a seed phrase or private key.</p>
+    <button class="wallet" id="wEvm">EVM wallet <small>MetaMask, Rabby, Coinbase</small></button>
+    <button class="wallet" id="wSol">Solana wallet <small>Phantom, Solflare</small></button>
+    <div class="status" id="signStatus"></div>
+  </div>
+</div>
+
+<script type="module">
+/* ---------- Three.js full-page scene ---------- */
+try{
+  const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+  const canvas=document.getElementById('gl');
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setSize(innerWidth,innerHeight,false);
+  renderer.setClearColor(0x08090A,1);
+  const scene=new THREE.Scene();
+  scene.fog=new THREE.Fog(0x08090A,14,46);
+  const cam=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,100);
+  cam.position.set(0,1.6,12);
+
+  const knot=new THREE.Mesh(new THREE.TorusKnotGeometry(2.4,.62,220,22,2,3),
+    new THREE.MeshBasicMaterial({color:0x94A3B8,wireframe:true,transparent:true,opacity:.16}));
+  const core=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.05,1)),
+    new THREE.LineBasicMaterial({color:0x64748B,transparent:true,opacity:.5}));
+  const group=new THREE.Group();group.add(knot,core);group.position.set(3.4,1.2,0);scene.add(group);
+
+  const NX=120,NZ=80,SP=.42,pos=new Float32Array(NX*NZ*3);
+  for(let i=0;i<NX;i++)for(let j=0;j<NZ;j++){const k=(i*NZ+j)*3;pos[k]=(i-NX/2)*SP;pos[k+1]=0;pos[k+2]=(j-NZ/2)*SP-6}
+  const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x64748B,size:.045,transparent:true,opacity:.75,sizeAttenuation:true}));
+  pts.position.y=-3.2;scene.add(pts);
+
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let mx=0,my=0,tx=0,ty=0,sy=0,ssy=0;
+  addEventListener('pointermove',e=>{tx=e.clientX/innerWidth-.5;ty=e.clientY/innerHeight-.5},{passive:true});
+  addEventListener('scroll',()=>{sy=scrollY},{passive:true});
+  addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+  const clock=new THREE.Clock();
+  const frame=()=>{
+    const t=clock.getElapsedTime()*(reduce?.15:1);
+    mx+=(tx-mx)*.05;my+=(ty-my)*.05;ssy+=(sy-ssy)*.08;
+    const max=Math.max(1,document.documentElement.scrollHeight-innerHeight),p=ssy/max;
+    knot.rotation.x=t*.12+p*3;knot.rotation.y=t*.18+p*2;core.rotation.y=-t*.3;core.rotation.x=t*.2;
+    group.position.x=3.4-p*6.8;group.position.y=1.2-p*1.5;
+    const a=pg.attributes.position.array;
+    for(let i=0,k=1;i<NX*NZ;i++,k+=3){const x=a[k-1],z=a[k+1];a[k]=Math.sin(x*.35+t*.8)*.45+Math.cos(z*.4+t*.6)*.35+Math.sin((x+z)*.18-t*.5)*.3}
+    pg.attributes.position.needsUpdate=true;
+    cam.position.x=mx*1.6;cam.position.y=1.6-my*1.0-p*1.2;cam.lookAt(0,-p*1.5,0);
+    renderer.render(scene,cam);requestAnimationFrame(frame);
+  };frame();
+}catch(e){console.warn('WebGL scene unavailable',e)}
+</script>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const CHAIN={ethereum:'1',base:'8453',bsc:'56',arbitrum:'42161',polygon:'137',optimism:'10',avalanche:'43114'};
+const CHAIN_NAME={ethereum:'Ethereum',base:'Base',bsc:'BNB Chain',arbitrum:'Arbitrum',polygon:'Polygon',optimism:'Optimism',avalanche:'Avalanche',solana:'Solana'};
+const QUICK=[
+  {sym:'PEPE',chain:'ETH',ca:'0x6982508145454Ce325dDbE47a25d4ec3d2311933'},
+  {sym:'BRETT',chain:'BASE',ca:'0x532f27101965dd16442E59d40670FaF5eBB142E4'},
+  {sym:'WIF',chain:'SOL',ca:'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm'}];
+let current=null,chartOn=true,busy=false;
+
+/* formatting */
+const usd=n=>{if(n==null||isNaN(n))return '—';const a=Math.abs(n);
+  if(a>=1e9)return '$'+(n/1e9).toFixed(2)+'B';if(a>=1e6)return '$'+(n/1e6).toFixed(2)+'M';if(a>=1e3)return '$'+(n/1e3).toFixed(1)+'K';return '$'+n.toFixed(2)};
+const price=p=>{p=+p;if(!p)return '—';if(p>=1)return '$'+p.toLocaleString('en-US',{maximumFractionDigits:4});
+  const s=p.toPrecision(4);if(p<1e-4){const m=p.toExponential(3);return '$'+m}return '$'+s};
+const pct=n=>n==null||isNaN(n)?'—':(n>0?'+':'')+(+n).toFixed(2)+'%';
+const short=a=>a&&a.length>14?a.slice(0,6)+'…'+a.slice(-4):(a||'—');
+const now=()=>new Date().toLocaleTimeString('en-GB',{hour12:false});
+const num=v=>v===''||v==null?null:+v;
+
+/* audit log */
+function log(msg,cls='',){const d=document.createElement('div');d.innerHTML=`<span class="t">[${now()}]</span> <span class="${cls}">${esc(msg)}</span>`;$('log').appendChild(d);$('log').scrollTop=1e9}
+$('clearLog').onclick=()=>{$('log').innerHTML=''};
+const status=(m,err)=>{$('status').textContent=m;$('status').className='status'+(err?' err':'')};
+
+async function getJSON(url,label){
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),12000);
+  try{const r=await fetch(url,{signal:ctl.signal,headers:{accept:'application/json'}});
+    if(!r.ok)throw new Error(`${label} HTTP ${r.status}`);return await r.json()}
+  catch(e){throw new Error(e.name==='AbortError'?`${label} timed out`:e.message)}
+  finally{clearTimeout(to)}
+}
+const bestPair=pairs=>(pairs||[]).filter(p=>p&&p.baseToken).sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
+const isAddr=q=>/^0x[a-fA-F0-9]{40}$/.test(q)||/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
+
+/* ---------- scan pipeline ---------- */
+async function scan(q){
+  q=(q||'').trim();if(!q||busy)return;busy=true;$('scanBtn').disabled=true;$('scanBtn').textContent='Scanning…';
+  status('Querying DexScreener…');log(`Agent: scan requested for "${q}"`,'inf');
+  try{
+    let pair=null;
+    if(isAddr(q)){
+      log('DexScreener: GET /latest/dex/tokens/'+short(q));
+      const d=await getJSON('https://api.dexscreener.com/latest/dex/tokens/'+encodeURIComponent(q),'DexScreener');
+      pair=bestPair(d.pairs);
+    }
+    if(!pair){
+      log('DexScreener: fallback search q='+q);
+      const d=await getJSON('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q),'DexScreener');
+      pair=bestPair(d.pairs);
+    }
+    if(!pair)throw new Error('No trading pairs found for this query.');
+    log(`Selected deepest pool: ${pair.dexId} ${pair.baseToken.symbol}/${pair.quoteToken?.symbol||'?'} · liq ${usd(pair.liquidity?.usd)}`,'ok');
+    const ca=pair.baseToken.address,chain=pair.chainId;
+    renderMarket(pair);
+    status('Querying GoPlus Security…');
+    let sec=null,secErr=null;
+    try{sec=await goplus(chain,ca)}catch(e){secErr=e.message;log('GoPlus: '+e.message,'bad')}
+    const res=scoreToken(pair,sec);
+    current={pair,sec,res,chain,ca};
+    renderSecurity(chain,sec,secErr);renderScore(res);renderDesk();
+    $('scanTime').textContent='Scanned '+now()+' · '+(CHAIN_NAME[chain]||chain);
+    log(`Verdict: ${res.verdict} (${res.score}/100)`,res.cls==='b-safe'?'ok':res.cls==='b-caut'?'warn':'bad');
+    status(secErr?'Market data loaded. Security data unavailable: '+secErr:'Scan complete.',!!secErr);
+  }catch(e){status(e.message,true);log('Scan failed: '+e.message,'bad')}
+  finally{busy=false;$('scanBtn').disabled=false;$('scanBtn').textContent='Run Scan'}
+}
+
+async function goplus(chain,ca){
+  let url,sol=chain==='solana';
+  if(sol)url='https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses='+encodeURIComponent(ca);
+  else{const id=CHAIN[chain];if(!id)throw new Error(`chain "${chain}" not supported by GoPlus mapping`);
+    url=`https://api.gopluslabs.io/api/v1/token_security/${id}?contract_addresses=${encodeURIComponent(ca)}`}
+  log(`GoPlus: GET ${sol?'/solana/token_security':'/token_security/'+CHAIN[chain]}`);
+  const d=await getJSON(url,'GoPlus');
+  if(d.code!==1&&d.code!=='1'&&!d.result)throw new Error(d.message||'GoPlus returned no result');
+  const r=d.result||{};const key=Object.keys(r).find(k=>k.toLowerCase()===ca.toLowerCase())||Object.keys(r)[0];
+  if(!key)throw new Error('GoPlus has no record for this token yet');
+  log('GoPlus: security record received','ok');
+  return normalize(r[key],sol);
+}
+function normalize(t,sol){
+  const holders=(t.holders||[]).slice(0,10).map(h=>({addr:h.address||h.account||h.token_account||'',pct:(+h.percent||0)*100,tag:h.tag||(h.is_contract==1?'contract':'')+(h.is_locked==1?' locked':'')}));
+  const top10=holders.reduce((s,h)=>s+h.pct,0);
+  if(sol){
+    const st=o=>o==null?null:(typeof o==='object'?o.status:o);
+    const fee=t.transfer_fee&&typeof t.transfer_fee==='object'?num(t.transfer_fee.current_fee_rate?.fee_rate??t.transfer_fee.fee_rate):null;
+    return {sol:true,honeypot:null,open:null,proxy:null,mint:st(t.mintable)==null?null:st(t.mintable)=='1',freeze:st(t.freezable)==null?null:st(t.freezable)=='1',
+      buyTax:fee!=null?fee/100:null,sellTax:fee!=null?fee/100:null,holderCount:num(t.holder_count),holders,top10:holders.length?top10:null};
+  }
+  const flag=v=>v===''||v==null?null:v=='1';
+  return {sol:false,honeypot:flag(t.is_honeypot),open:flag(t.is_open_source),proxy:flag(t.is_proxy),mint:flag(t.is_mintable),
+    buyTax:num(t.buy_tax)!=null?num(t.buy_tax)*100:null,sellTax:num(t.sell_tax)!=null?num(t.sell_tax)*100:null,
+    holderCount:num(t.holder_count),holders,top10:holders.length?top10:null,name:t.token_name};
+}
+
+/* ---------- deterministic scoring ---------- */
+function scoreToken(pair,s){
+  const d=[];let score=100;const liq=pair.liquidity?.usd||0;
+  if(s&&s.honeypot===true)return {score:0,verdict:'DO NOT BUY — HONEYPOT',cls:'b-crit',d:[['Honeypot detected','→ 0']]};
+  if(s){
+    if(s.open===false)d.push(['Source not verified',-25]);
+    if(s.mint===true)d.push([s.sol?'Mint authority active':'Mintable supply',-20]);
+    if(s.proxy===true)d.push(['Upgradeable proxy',-15]);
+    const tax=Math.max(s.buyTax||0,s.sellTax||0);
+    if(tax>15)d.push([`Tax ${tax.toFixed(1)}% > 15%`,-35]);else if(tax>5)d.push([`Tax ${tax.toFixed(1)}% > 5%`,-15]);
+    if(s.top10!=null&&s.top10>50)d.push([`Top-10 hold ${s.top10.toFixed(1)}%`,-20]);
+  }
+  if(liq<1e4)d.push([`Liquidity ${usd(liq)} < $10K`,-35]);else if(liq<5e4)d.push([`Liquidity ${usd(liq)} < $50K`,-20]);
+  d.forEach(x=>{score+=x[1]});score=Math.max(0,Math.min(100,score));
+  const verdict=score>=75?'SAFE TO ALLOCATE':score>=45?'CAUTION — HIGH RISK':'DO NOT BUY — CRITICAL RISK';
+  const cls=score>=75?'b-safe':score>=45?'b-caut':'b-crit';
+  if(!s)d.push(['Security data unavailable','unscored']);
+  return {score,verdict,cls,d};
+}
+
+/* ---------- renderers ---------- */
+function renderMarket(p){
+  const b=p.baseToken;
+  $('tokIcon').textContent=(b.symbol||'?').slice(0,4);
+  $('tokName').textContent=`${b.name||b.symbol} · $${b.symbol}`;
+  $('tokMeta').textContent=`${CHAIN_NAME[p.chainId]||p.chainId} · ${p.dexId} · ${short(b.address)}`;
+  $('sPrice').textContent=price(p.priceUsd);
+  const c=p.priceChange?.h24;$('sChg').textContent=pct(c);$('sChg').className=c>0?'up':c<0?'dn':'';
+  $('sLiq').textContent=usd(p.liquidity?.usd);$('sVol').textContent=usd(p.volume?.h24);$('sFdv').textContent=usd(p.fdv);
+  const bu=p.txns?.h24?.buys||0,se=p.txns?.h24?.sells||0,tot=bu+se;
+  $('buyBar').style.width=(tot?bu/tot*100:50)+'%';
+  $('buys').textContent=`Buys ${bu.toLocaleString()} (${tot?(bu/tot*100).toFixed(1):'—'}%)`;
+  $('sells').textContent=`Sells ${se.toLocaleString()} (${tot?(se/tot*100).toFixed(1):'—'}%)`;
+  $('txTotal').textContent=tot.toLocaleString()+' txns';
+  $('pairLbl').textContent=`${b.symbol}/${p.quoteToken?.symbol||''} ${short(p.pairAddress)}`;
+  $('dsLink').href=p.url||`https://dexscreener.com/${p.chainId}/${p.pairAddress}`;
+  log(`Market: price ${price(p.priceUsd)} · 24h ${pct(c)} · vol ${usd(p.volume?.h24)} · FDV ${usd(p.fdv)}`);
+  chartPair=p;renderChart();
+}
+let chartPair=null;
+function renderChart(){
+  const box=$('chartBox');
+  if(!chartOn){box.style.display='none';return}box.style.display='';
+  const p=chartPair;const src=p?`https://dexscreener.com/${encodeURIComponent(p.chainId)}/${encodeURIComponent(p.pairAddress)}?embed=1&theme=dark&trades=0&info=0`:null;
+  if(!src)return;
+  const ex=box.querySelector('iframe');if(ex&&ex.dataset.src===src)return;
+  box.innerHTML=`<div class="ph">Loading DexScreener chart…</div><iframe title="DexScreener live chart" loading="lazy" data-src="${esc(src)}" src="${esc(src)}"></iframe>`;
+}
+$('chartToggle').onclick=()=>{chartOn=!chartOn;$('chartToggle').textContent=chartOn?'Hide chart':'Show chart';$('chartToggle').setAttribute('aria-pressed',chartOn);renderChart()};
+
+const ICON={pass:'<svg class="ic" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" stroke="#2E9E6B" stroke-width="1.8" fill="none"/></svg>',
+  fail:'<svg class="ic" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="#C94A4A" stroke-width="1.8"/></svg>',
+  warn:'<svg class="ic" viewBox="0 0 16 16"><path d="M8 3v6M8 11.5v1.5" stroke="#D99B26" stroke-width="1.8"/></svg>',
+  na:'<svg class="ic" viewBox="0 0 16 16"><path d="M4 8h8" stroke="#5B6370" stroke-width="1.8"/></svg>'};
+function renderSecurity(chain,s,err){
+  $('gpChain').textContent=chain==='solana'?'solana':'chain '+(CHAIN[chain]||chain);
+  if(!s){$('checks').innerHTML=`<li><span>${ICON.warn}</span><span>GoPlus data unavailable</span><span class="r" style="color:var(--amber)">${esc(err||'')}</span></li>`;
+    $('sHold').textContent='—';$('topPct').textContent='—';$('topBar').style.width='0';$('holders').innerHTML='';return}
+  const row=(label,state,val)=>`<li><span>${ICON[state]}</span><span>${esc(label)}</span><span class="r" style="color:${state==='pass'?'var(--sage)':state==='fail'?'var(--crimson)':state==='warn'?'var(--amber)':'var(--dim)'}">${esc(val)}</span></li>`;
+  const b=(v,good,yes,no)=>v==null?['na','N/A']:v===good?['pass',good?yes:no]:['fail',good?no:yes];
+  const taxState=t=>t==null?['na','N/A']:t>15?['fail',t.toFixed(2)+'%']:t>5?['warn',t.toFixed(2)+'%']:['pass',t.toFixed(2)+'%'];
+  const rows=[
+    ['Honeypot simulation',...b(s.honeypot,false,'Detected','Clear')],
+    ['Source code verified',...b(s.open,true,'Verified','Unverified')],
+    ['Proxy / upgradeable',...b(s.proxy,false,'Proxy','None')],
+    [s.sol?'Mint authority':'Mint function',...b(s.mint,false,'Active','Renounced')],
+  ];
+  if(s.sol)rows.push(['Freeze authority',...(s.freeze==null?['na','N/A']:s.freeze?['warn','Active']:['pass','None'])]);
+  rows.push(['Buy tax',...taxState(s.buyTax)],['Sell tax',...taxState(s.sellTax)]);
+  $('checks').innerHTML=rows.map(r=>row(r[0],r[1],r[2])).join('');
+  rows.forEach(r=>{if(r[1]==='fail')log(`Flag: ${r[0]} → ${r[2]}`,'bad');else if(r[1]==='warn')log(`Flag: ${r[0]} → ${r[2]}`,'warn')});
+  $('sHold').textContent=s.holderCount!=null?s.holderCount.toLocaleString():'—';
+  if(s.top10!=null){$('topPct').textContent=s.top10.toFixed(2)+'%';$('topBar').style.width=Math.min(100,s.top10)+'%';
+    $('topBar').style.background=s.top10>50?'var(--crimson)':s.top10>30?'var(--amber)':'var(--silver)';
+    $('holders').innerHTML=s.holders.map((h,i)=>`<li><span style="color:var(--dim)">${i+1}</span><span class="a" title="${esc(h.addr)}">${esc(short(h.addr))}${h.tag?` <span style="color:var(--dim)">${esc(h.tag.trim())}</span>`:''}</span><span class="p">${h.pct.toFixed(2)}%</span></li>`).join('');
+    log(`Holders: top-10 concentration ${s.top10.toFixed(2)}%`,s.top10>50?'bad':'')}
+  else{$('topPct').textContent='N/A';$('topBar').style.width='0';$('holders').innerHTML='<li><span></span><span>No holder list returned</span><span></span></li>'}
+}
+function renderScore(r){
+  $('score').textContent=r.score;
+  const arc=$('gArc');arc.style.strokeDashoffset=326.7*(1-r.score/100);
+  arc.style.stroke=r.cls==='b-safe'?'#2E9E6B':r.cls==='b-caut'?'#D99B26':'#C94A4A';
+  $('verdict').className='badge '+r.cls;$('verdict').textContent=r.verdict;
+  $('deds').innerHTML=r.d.length?r.d.map(x=>`<li><span>${esc(x[0])}</span><b>${typeof x[1]==='number'?x[1]:esc(x[1])}</b></li>`).join(''):'<li class="ok"><span>No deductions</span><b>100</b></li>';
+}
+
+/* ---------- agent desk ---------- */
+function renderDesk(){
+  if(!current)return;const {pair:p,res:r}=current;
+  $('m1').innerHTML=`<span>Last target</span><span>$${esc(p.baseToken.symbol)}</span><span>Score</span><span>${r.score}/100</span><span>Deductions</span><span>${r.d.filter(x=>typeof x[1]==='number').length}</span>`;
+  const gate=r.score>=75?['Open','var(--sage)']:r.score>=45?['Reduced size','var(--amber)']:['Blocked','var(--crimson)'];
+  const cap=r.score>=75?'100%':r.score>=45?'25%':'0%';
+  $('m2').innerHTML=`<span>Execution gate</span><span style="color:${gate[1]}">${gate[0]}</span><span>Max allocation</span><span>${cap} of policy</span><span>Slippage guard</span><span>${(p.liquidity?.usd||0)<5e4?'1.0%':'0.5%'}</span>`;
+  sim();
+  const tf=[['5m','m5'],['1h','h1'],['6h','h6'],['24h','h24']];
+  $('m4').innerHTML=tf.map(([l,k])=>{const b=p.txns?.[k]?.buys||0,s=p.txns?.[k]?.sells||0,t=b+s,bp=t?b/t*100:50;
+    const imb=t?((b-s)/t*100):0;
+    return `<div class="radar"><span style="color:var(--mute)">${l}</span><div class="ratio"><span style="width:${bp.toFixed(1)}%"></span></div><span class="rr ${imb>0?'up':imb<0?'dn':''}">${imb>0?'+':''}${imb.toFixed(1)}% · ${t.toLocaleString()}</span></div>`}).join('')
+    +`<p class="fine">Imbalance = (buys − sells) / total transactions.</p>`;
+}
+function sim(){
+  if(!current){return}const p=current.pair,px=+p.priceUsd,liq=p.liquidity?.usd||0;
+  const size=Math.max(0,+$('pSize').value||0),sl=Math.min(99,Math.max(0,+$('pSl').value||0)),tp=Math.max(0,+$('pTp').value||0);
+  if(!px||!size){$('m3').innerHTML='<span>Enter a size</span><span></span>';return}
+  const impact=liq?Math.min(99,size/(liq/2+size)*100):null; /* constant-product estimate on one side of the pool */
+  const qty=size*(1-(impact||0)/100)/px;
+  const f=v=>v>=1?v.toLocaleString('en-US',{maximumFractionDigits:2}):v.toPrecision(4);
+  $('m3').innerHTML=`<span>Entry (live)</span><span>${price(px)}</span><span>Est. price impact</span><span style="color:${impact>3?'var(--crimson)':impact>1?'var(--amber)':'var(--sage)'}">${impact==null?'—':impact.toFixed(2)+'%'}</span>
+    <span>Tokens received</span><span>${f(qty)}</span><span>Stop @ ${price(px*(1-sl/100))}</span><span class="dn">−$${(size*sl/100).toFixed(2)}</span>
+    <span>Target @ ${price(px*(1+tp/100))}</span><span class="up">+$${(size*tp/100).toFixed(2)}</span><span>Reward : risk</span><span>${sl?(tp/sl).toFixed(2):'—'}</span>`;
+}
+['pSize','pSl','pTp'].forEach(id=>$(id).addEventListener('input',sim));
+
+/* ---------- ticker ---------- */
+async function ticker(){
+  try{
+    const d=await getJSON('https://api.dexscreener.com/latest/dex/tokens/'+QUICK.map(q=>q.ca).join(','),'Ticker');
+    const items=QUICK.map(q=>{const p=bestPair((d.pairs||[]).filter(x=>x.baseToken?.address?.toLowerCase()===q.ca.toLowerCase()));
+      if(!p)return '';const c=p.priceChange?.h24;
+      return `<span><b>$${esc(q.sym)}</b> ${esc(price(p.priceUsd))} <span class="${c>0?'up':'dn'}">${esc(pct(c))}</span> · liq ${esc(usd(p.liquidity?.usd))} · vol ${esc(usd(p.volume?.h24))}</span>`}).filter(Boolean);
+    if(current){const p=current.pair;items.push(`<span><b>LAST SCAN</b> $${esc(p.baseToken.symbol)} · score ${current.res.score} · ${esc(current.res.verdict)}</span>`)}
+    items.push(`<span><b>SOURCES</b> DexScreener · GoPlus Security · ${esc(now())}</span>`);
+    $('ticker').innerHTML=items.join('')+items.join('');
+  }catch(e){$('ticker').innerHTML=`<span class="dn">Telemetry unavailable: ${esc(e.message)}</span>`}
+}
+
+/* ---------- command palette ---------- */
+const cmds=[
+  ...QUICK.map(q=>({l:`Scan $${q.sym}`,h:q.chain,run:()=>{$('caInput').value=q.ca;scan(q.ca);go('#dashboard')}})),
+  {l:'Go to scanner',h:'nav',run:()=>{go('#scanner');setTimeout(()=>$('caInput').focus(),300)}},
+  {l:'Go to forensic verdict',h:'nav',run:()=>go('#dashboard')},
+  {l:'Go to Agent Desk',h:'nav',run:()=>go('#desk')},
+  {l:'Go to changelog',h:'nav',run:()=>go('#changelog')},
+  {l:'Go to FAQ',h:'nav',run:()=>go('#faq')},
+  {l:'Toggle live chart',h:'view',run:()=>$('chartToggle').click()},
+  {l:'Rescan current token',h:'agent',run:()=>current&&scan(current.ca)},
+  {l:'Clear audit log',h:'agent',run:()=>$('clearLog').click()},
+  {l:'Sign In',h:'account',run:()=>openM('signModal')}];
+let sel=0,shown=[];
+const go=h=>document.querySelector(h)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+function drawCmd(){const q=$('cmdIn').value.trim();
+  shown=cmds.filter(c=>c.l.toLowerCase().includes(q.toLowerCase()));
+  if(q&&(isAddr(q)||(!shown.length&&q.length>1)))shown.unshift({l:`Scan "${q.length>24?short(q):q}"`,h:'scan',run:()=>{$('caInput').value=q;scan(q);go('#dashboard')}});
+  sel=Math.min(sel,Math.max(0,shown.length-1));
+  $('cmdList').innerHTML=shown.length?shown.map((c,i)=>`<li data-i="${i}" class="${i===sel?'sel':''}"><span>${esc(c.l)}</span><small>${esc(c.h)}</small></li>`).join(''):'<li><span style="color:var(--dim)">No matches</span></li>'}
+function openM(id){$(id).classList.add('open');if(id==='cmdModal'){$('cmdIn').value='';sel=0;drawCmd();setTimeout(()=>$('cmdIn').focus(),0)}}
+function closeM(id){$(id).classList.remove('open')}
+$('openCmd').onclick=()=>openM('cmdModal');
+$('cmdIn').addEventListener('input',()=>{sel=0;drawCmd()});
+$('cmdIn').addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){sel=(sel+1)%Math.max(1,shown.length);drawCmd();e.preventDefault()}
+  else if(e.key==='ArrowUp'){sel=(sel-1+shown.length)%Math.max(1,shown.length);drawCmd();e.preventDefault()}
+  else if(e.key==='Enter'&&shown[sel]){closeM('cmdModal');shown[sel].run()}});
+$('cmdList').addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(li){closeM('cmdModal');shown[+li.dataset.i].run()}});
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('cmdModal').classList.contains('open')?closeM('cmdModal'):openM('cmdModal')}
+  if(e.key==='Escape'){closeM('cmdModal');closeM('signModal')}});
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeM(m.id)}));
+
+/* ---------- sign in (non-custodial, address only) ---------- */
+$('openSignin').onclick=()=>openM('signModal');$('closeSign').onclick=()=>closeM('signModal');
+const signed=(addr)=>{$('openSignin').textContent=short(addr);$('signStatus').textContent='Connected: '+addr;$('signStatus').className='status';log('Sign In: wallet connected '+short(addr),'ok');setTimeout(()=>closeM('signModal'),900)};
+$('wEvm').onclick=async()=>{const eth=window.ethereum;
+  if(!eth){$('signStatus').textContent='No EVM wallet detected in this browser.';$('signStatus').className='status err';return}
+  try{const [a]=await eth.request({method:'eth_requestAccounts'});signed(a)}catch(e){$('signStatus').textContent=e.message||'Request rejected';$('signStatus').className='status err'}};
+$('wSol').onclick=async()=>{const sol=window.phantom?.solana||window.solana||window.solflare;
+  if(!sol){$('signStatus').textContent='No Solana wallet detected in this browser.';$('signStatus').className='status err';return}
+  try{const r=await sol.connect();signed((r?.publicKey||sol.publicKey).toString())}catch(e){$('signStatus').textContent=e.message||'Request rejected';$('signStatus').className='status err'}};
+
+/* ---------- wiring ---------- */
+$('scanForm').addEventListener('submit',e=>{e.preventDefault();scan($('caInput').value)});
+document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{$('caInput').value=b.dataset.ca;scan(b.dataset.ca)});
+log('OMEN Agent online. Sources: DexScreener, GoPlus Security.','inf');
+$('caInput').value=QUICK[0].ca;
+scan(QUICK[0].ca).then(ticker);
+setInterval(ticker,60000);
+}
+</script>
+</body>
+</html>
