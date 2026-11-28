@@ -302,9 +302,11 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
             <ul class="checks" id="checks"><li class="skel"><span></span><span>Awaiting scan</span><span></span></li></ul>
           </div>
           <div class="card">
-            <div class="ct"><span>Top 10 holder concentration</span><b class="mono" id="topPct" style="color:var(--ivory);font-size:14px">—</b></div>
+            <div class="ct"><span>Top 10 wallet concentration</span><b class="mono" id="topPct" style="color:var(--ivory);font-size:14px">—</b></div>
             <div class="bar"><span id="topBar" style="width:0"></span></div>
             <ul class="holders" id="holders"></ul>
+            <p class="fine" id="topNote">Excludes DEX pools and burn addresses.</p>
+            <div id="lpBox"></div>
           </div>
         </div>
       </div>
@@ -364,6 +366,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="card" id="changelog">
         <h2 style="font-size:24px;margin-bottom:18px">Engineering Changelog</h2>
         <ul class="cl">
+          <li><div class="ver">v0.6.0<small>Nov 2026</small></div><div><b>Soft-rug and owner-power detection</b><p>Scores LP ownership and locks, 13 owner and trading-control flags, and deployer honeypot history. Top-10 now excludes pools and burn addresses. UERC20 factory false positives are handled.</p></div></li>
           <li><div class="ver">v0.5.0<small>Nov 2026</small></div><div><b>Robinhood Chain only</b><p>OMEN now scans Robinhood Chain (ID 4663) exclusively. Solana and other EVM chains were removed. Ticker search warns when several tokens share a symbol, since copycat tokens with inflated liquidity are common.</p></div></li>
           <li><div class="ver">v0.4.0<small>Nov 2026</small></div><div><b>Paper-mode simulator and order-flow radar</b><p>Modules 03 and 04 now read live pair data: price-impact estimate from pool depth, and buy/sell imbalance across 5m, 1h, 6h and 24h.</p></div></li>
           <li><div class="ver">v0.3.0<small>Nov 2026</small></div><div><b>Multi-chain security path</b><p>GoPlus mapping for EVM chains and Solana. Superseded by v0.5.0, which narrows OMEN to Robinhood Chain.</p></div></li>
@@ -374,12 +377,13 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="card" id="faq">
         <h2 style="font-size:24px;margin-bottom:18px">Technical FAQ</h2>
         <details open><summary>Where does the data come from?</summary><p>Market data from <code>api.dexscreener.com</code> and security flags from <code>api.gopluslabs.io</code>, both called directly from your browser. There is no OMEN backend in between and no demo data.</p></details>
-        <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Not open source −25, mintable −20, proxy −15, max tax &gt;5% −15 or &gt;15% −35, liquidity &lt;$50k −20 or &lt;$10k −35, top-10 holders &gt;50% −20. ≥75 is Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
+        <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Contract: not open source −25, mintable −20, proxy −15, tax &gt;5% −15 or &gt;15% −35. Owner powers: cannot sell all −40, owner can change balances −35, creator made honeypots before −30, hidden owner / reclaimable ownership / self-destruct −25 each, buying restricted or tax changeable −20, pausable transfers / blacklist / per-wallet tax −15, cooldown −10, external calls −5. Soft-rug: one wallet controls &gt;50% of unlocked LP −25, otherwise &lt;90% of LP locked or burned −10. Market: liquidity &lt;$50k −20 or &lt;$10k −35, top-10 wallets &gt;50% −20. ≥75 Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
+        <details><summary>What is a soft-rug and how does OMEN catch it?</summary><p>A token with clean code whose liquidity sits in one wallet. When buyers pile in, that wallet pulls the pool and holders are left with nothing to sell into. OMEN reads who owns the LP positions and how much is locked or burned, and deducts when a single unlocked owner controls most of it.</p></details>
         <details><summary>Which pair is used when a token trades in many pools?</summary><p>The pair with the highest <code>liquidity.usd</code>. Thin pools are easy to manipulate, so the deepest pool is the most honest price.</p></details>
         <details><summary>Which chain does OMEN support?</summary><p>Only Robinhood Chain, the Ethereum L2 by Robinhood (chain ID <code>4663</code>, ETH for gas). Tokens on other chains are rejected. Verify any address on <a href="https://robinhoodchain.blockscout.com" target="_blank" rel="noopener">robinhoodchain.blockscout.com</a>.</p></details>
         <details><summary>Why scan by address instead of ticker?</summary><p>Anyone can deploy a token with the same name. A copycat can show more liquidity than the original, and ticker search picks the deepest pool, so it can land on the fake. When several tokens share a ticker the Agent warns you; always confirm the contract address from the project's official links.</p></details>
-        <details><summary>Can GoPlus be wrong on Robinhood Chain?</summary><p>Yes. Coverage is newer here, some fields (such as taxes) can come back empty and show N/A, and some factory-deployed tokens have been reported as false honeypot positives. Treat the score as a first filter, then check the contract on the explorer.</p></details>
-        <details><summary>Does top-10 concentration include LP and burn wallets?</summary><p>Yes, it uses GoPlus' raw holder list. A pool or burn address in the top 10 can inflate the figure; check the labelled addresses below the bar.</p></details>
+        <details><summary>Can GoPlus be wrong on Robinhood Chain?</summary><p>Yes. Tokens from the Uniswap UERC20 v2.0.0 factory are wrongly flagged as honeypots with a hidden owner. OMEN recognises that factory, marks those flags as disputed, and only clears the honeypot flag when the token has real sells in the last 24 hours. Some fields can also come back empty and show N/A; treat the score as a first filter and check the explorer.</p></details>
+        <details><summary>Does top-10 concentration include LP and burn wallets?</summary><p>No. DEX pools (including the Uniswap v4 PoolManager) and burn addresses are removed first, and their shares are shown separately, so the bar measures real wallets only.</p></details>
         <details><summary>Does Sign In take custody of anything?</summary><p>No. It asks your wallet for its public address only. OMEN never requests a seed phrase, private key or transaction signature.</p></details>
       </div>
     </div>
@@ -516,7 +520,7 @@ async function scan(q){
     renderMarket(pair);
     status('Querying GoPlus Security…');
     let sec=null,secErr=null;
-    try{sec=await goplus(chain,ca)}catch(e){secErr=e.message;log('GoPlus: '+e.message,'bad')}
+    try{sec=await goplus(chain,ca,pair)}catch(e){secErr=e.message;log('GoPlus: '+e.message,'bad')}
     const res=scoreToken(pair,sec);
     current={pair,sec,res,chain,ca};
     renderSecurity(chain,sec,secErr);renderScore(res);renderDesk();
@@ -527,7 +531,7 @@ async function scan(q){
   finally{busy=false;$('scanBtn').disabled=false;$('scanBtn').textContent='Run Scan'}
 }
 
-async function goplus(chain,ca){
+async function goplus(chain,ca,pair){
   const id=CHAIN[chain];if(!id)throw new Error(`chain "${chain}" is not Robinhood Chain`);
   const url=`https://api.gopluslabs.io/api/v1/token_security/${id}?contract_addresses=${encodeURIComponent(ca)}`;
   log('GoPlus: GET /token_security/'+id);
@@ -536,34 +540,81 @@ async function goplus(chain,ca){
   const r=d.result||{};const key=Object.keys(r).find(k=>k.toLowerCase()===ca.toLowerCase())||Object.keys(r)[0];
   if(!key)throw new Error('GoPlus has no record for this token yet');
   log('GoPlus: security record received','ok');
-  return normalize(r[key]);
+  return normalize(r[key],pair);
 }
-function normalize(t){
-  const holders=(t.holders||[]).slice(0,10).map(h=>({addr:h.address||h.account||h.token_account||'',pct:(+h.percent||0)*100,tag:h.tag||(h.is_contract==1?'contract':'')+(h.is_locked==1?' locked':'')}));
-  const top10=holders.reduce((s,h)=>s+h.pct,0);
+/* ---------- deterministic scoring ---------- */
+const UERC20_FACTORY='0x000000e200088d55c39a11f609e5f667729ad49b';
+const BURN=new Set(['0x0000000000000000000000000000000000000000','0x000000000000000000000000000000000000dead','0xdead000000000000000042069420694206942069']);
+/* owner-privilege and trading-control flags: [goplus field, label, deduction, severity] */
+const OWNER_FLAGS=[
+  ['cannot_sell_all','Cannot sell full balance',-40,'fail'],
+  ['owner_change_balance','Owner can change balances',-35,'fail'],
+  ['honeypot_with_same_creator','Creator deployed honeypots before',-30,'fail'],
+  ['hidden_owner','Hidden owner',-25,'fail'],
+  ['can_take_back_ownership','Ownership can be reclaimed',-25,'fail'],
+  ['selfdestruct','Self-destruct function',-25,'fail'],
+  ['cannot_buy','Buying restricted',-20,'fail'],
+  ['slippage_modifiable','Owner can change tax',-20,'fail'],
+  ['transfer_pausable','Transfers can be paused',-15,'warn'],
+  ['is_blacklisted','Blacklist function',-15,'warn'],
+  ['personal_slippage_modifiable','Per-wallet tax override',-15,'warn'],
+  ['trading_cooldown','Trading cooldown',-10,'warn'],
+  ['external_call','External calls in transfer',-5,'warn']];
+/* flags GoPlus is known to raise wrongly on UERC20 v2.0.0 factory tokens */
+const UERC20_FP=new Set(['hidden_owner','owner_change_balance']);
+
+function normalize(t,pair){
   const flag=v=>v===''||v==null?null:v=='1';
-  return {sol:false,honeypot:flag(t.is_honeypot),open:flag(t.is_open_source),proxy:flag(t.is_proxy),mint:flag(t.is_mintable),
+  const factory=(t.creator_address||'').toLowerCase()===UERC20_FACTORY;
+  /* pools: every DEX pair GoPlus lists + the v4 PoolManager + the DexScreener pair */
+  const pools=new Set([(pair?.pairAddress||'').toLowerCase()]);
+  (t.dex||[]).forEach(x=>{if(x.pair)pools.add(x.pair.toLowerCase());if(x.pool_manager)pools.add(x.pool_manager.toLowerCase())});
+  const all=(t.holders||[]).map(h=>({addr:h.address||'',pct:(+h.percent||0)*100,tag:(h.tag||'').trim(),contract:h.is_contract==1,locked:h.is_locked==1}));
+  const kind=h=>{const a=h.addr.toLowerCase();if(BURN.has(a)||/dead|burn/i.test(h.tag))return 'burn';if(pools.has(a)||/pool|pair|uniswap|lp/i.test(h.tag))return 'pool';return 'holder'};
+  all.forEach(h=>h.kind=kind(h));
+  const wallets=all.filter(h=>h.kind==='holder').slice(0,10);
+  const top10=wallets.reduce((s,h)=>s+h.pct,0);
+  const burned=all.filter(h=>h.kind==='burn').reduce((s,h)=>s+h.pct,0);
+  const inPools=all.filter(h=>h.kind==='pool').reduce((s,h)=>s+h.pct,0);
+  /* liquidity: share of LP that is locked or burned, and the largest unlocked LP holder */
+  const lp=(t.lp_holders||[]).map(h=>({addr:h.address||'',pct:(+h.percent||0)*100,locked:h.is_locked==1||BURN.has((h.address||'').toLowerCase()),contract:h.is_contract==1,tag:(h.tag||'').trim()}));
+  const lpSecured=lp.length?Math.min(100,lp.filter(h=>h.locked).reduce((s,h)=>s+h.pct,0)):null;
+  const lpTop=lp.filter(h=>!h.locked).sort((a,b)=>b.pct-a.pct)[0]||null;
+  const owner={};OWNER_FLAGS.forEach(([k])=>{owner[k]=flag(t[k])});
+  return {honeypot:flag(t.is_honeypot),open:flag(t.is_open_source),proxy:flag(t.is_proxy),mint:flag(t.is_mintable),
     buyTax:num(t.buy_tax)!=null?num(t.buy_tax)*100:null,sellTax:num(t.sell_tax)!=null?num(t.sell_tax)*100:null,
-    holderCount:num(t.holder_count),holders,top10:holders.length?top10:null,name:t.token_name};
+    holderCount:num(t.holder_count),holders:wallets,top10:wallets.length?top10:null,burned,inPools,
+    lp,lpSecured,lpTop,owner,factory,creator:t.creator_address||'',name:t.token_name};
 }
 
-/* ---------- deterministic scoring ---------- */
 function scoreToken(pair,s){
-  const d=[];let score=100;const liq=pair.liquidity?.usd||0;
-  if(s&&s.honeypot===true)return {score:0,verdict:'DO NOT BUY — HONEYPOT',cls:'b-crit',d:[['Honeypot detected','→ 0']]};
+  const d=[];let score=100;const liq=pair.liquidity?.usd||0;const sells=pair.txns?.h24?.sells||0;
   if(s){
+    /* honeypot: hard zero, unless it is the documented UERC20 factory false positive */
+    if(s.honeypot===true){
+      if(!s.factory)return {score:0,verdict:'DO NOT BUY — HONEYPOT',cls:'b-crit',d:[['Honeypot detected','→ 0']],notes:[]};
+      if(sells>=5)s.hpNote=`Honeypot flag ignored: UERC20 factory token (known GoPlus false positive) and ${sells} sells in 24h`;
+      else{d.push(['Honeypot flag unconfirmed (UERC20 factory, few sells)',-20]);s.hpNote='UERC20 factory token: GoPlus flag is a known false positive, but too few sells to confirm'}
+    }
     if(s.open===false)d.push(['Source not verified',-25]);
     if(s.mint===true)d.push(['Mintable supply',-20]);
     if(s.proxy===true)d.push(['Upgradeable proxy',-15]);
     const tax=Math.max(s.buyTax||0,s.sellTax||0);
     if(tax>15)d.push([`Tax ${tax.toFixed(1)}% > 15%`,-35]);else if(tax>5)d.push([`Tax ${tax.toFixed(1)}% > 5%`,-15]);
-    if(s.top10!=null&&s.top10>50)d.push([`Top-10 hold ${s.top10.toFixed(1)}%`,-20]);
+    OWNER_FLAGS.forEach(([k,label,pts])=>{if(s.owner[k]===true&&!(s.factory&&UERC20_FP.has(k)))d.push([label,pts])});
+    /* soft-rug: liquidity controlled by one wallet that has not locked or burned it */
+    if(s.lpSecured!=null&&s.lpSecured<90){
+      if(s.lpTop&&s.lpTop.pct>50)d.push([`One wallet controls ${s.lpTop.pct.toFixed(0)}% of LP (not locked)`,-25]);
+      else d.push([`Only ${s.lpSecured.toFixed(0)}% of LP locked or burned`,-10]);
+    }
+    if(s.top10!=null&&s.top10>50)d.push([`Top-10 wallets hold ${s.top10.toFixed(1)}%`,-20]);
   }
   if(liq<1e4)d.push([`Liquidity ${usd(liq)} < $10K`,-35]);else if(liq<5e4)d.push([`Liquidity ${usd(liq)} < $50K`,-20]);
-  d.forEach(x=>{score+=x[1]});score=Math.max(0,Math.min(100,score));
+  d.forEach(x=>{if(typeof x[1]==='number')score+=x[1]});score=Math.max(0,Math.min(100,score));
   const verdict=score>=75?'SAFE TO ALLOCATE':score>=45?'CAUTION — HIGH RISK':'DO NOT BUY — CRITICAL RISK';
   const cls=score>=75?'b-safe':score>=45?'b-caut':'b-crit';
   if(!s)d.push(['Security data unavailable','unscored']);
+  else if(!s.lp.length)d.push(['LP ownership data unavailable','unscored']);
   return {score,verdict,cls,d};
 }
 
@@ -605,24 +656,41 @@ const ICON={pass:'<svg class="ic" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" s
 function renderSecurity(chain,s,err){
   $('gpChain').textContent='chain '+(CHAIN[chain]||chain);
   if(!s){$('checks').innerHTML=`<li><span>${ICON.warn}</span><span>GoPlus data unavailable</span><span class="r" style="color:var(--amber)">${esc(err||'')}</span></li>`;
-    $('sHold').textContent='—';$('topPct').textContent='—';$('topBar').style.width='0';$('holders').innerHTML='';return}
-  const row=(label,state,val)=>`<li><span>${ICON[state]}</span><span>${esc(label)}</span><span class="r" style="color:${state==='pass'?'var(--sage)':state==='fail'?'var(--crimson)':state==='warn'?'var(--amber)':'var(--dim)'}">${esc(val)}</span></li>`;
+    $('sHold').textContent='—';$('topPct').textContent='—';$('topBar').style.width='0';$('holders').innerHTML='';$('lpBox').innerHTML='';return}
+  const color=st=>st==='pass'?'var(--sage)':st==='fail'?'var(--crimson)':st==='warn'?'var(--amber)':'var(--dim)';
+  const row=(label,state,val)=>`<li><span>${ICON[state]}</span><span>${esc(label)}</span><span class="r" style="color:${color(state)}">${esc(val)}</span></li>`;
   const b=(v,good,yes,no)=>v==null?['na','N/A']:v===good?['pass',good?yes:no]:['fail',good?no:yes];
   const taxState=t=>t==null?['na','N/A']:t>15?['fail',t.toFixed(2)+'%']:t>5?['warn',t.toFixed(2)+'%']:['pass',t.toFixed(2)+'%'];
+  const hp=s.honeypot===true&&s.factory?['warn','Disputed']:b(s.honeypot,false,'Detected','Clear');
+  const lpState=s.lpSecured==null?['na','N/A']:s.lpSecured>=90?['pass',s.lpSecured.toFixed(0)+'% secured']:s.lpTop&&s.lpTop.pct>50?['fail',s.lpTop.pct.toFixed(0)+'% one wallet']:['warn',s.lpSecured.toFixed(0)+'% secured'];
   const rows=[
-    ['Honeypot simulation',...b(s.honeypot,false,'Detected','Clear')],
+    ['Honeypot simulation',...hp],
+    ['Liquidity locked / burned',...lpState],
     ['Source code verified',...b(s.open,true,'Verified','Unverified')],
     ['Proxy / upgradeable',...b(s.proxy,false,'Proxy','None')],
     ['Mint function',...b(s.mint,false,'Active','Renounced')],
-  ];
-  rows.push(['Buy tax',...taxState(s.buyTax)],['Sell tax',...taxState(s.sellTax)]);
-  $('checks').innerHTML=rows.map(r=>row(r[0],r[1],r[2])).join('');
+    ['Buy tax',...taxState(s.buyTax)],['Sell tax',...taxState(s.sellTax)]];
+  let passed=0,unknown=0;
+  OWNER_FLAGS.forEach(([k,label,,sev])=>{const v=s.owner[k];
+    if(v===true){rows.push([label,...(s.factory&&UERC20_FP.has(k)?['warn','Disputed']:[sev,'Yes'])])}else if(v===false)passed++;else unknown++});
+  rows.push(['Owner & trading controls',...(passed?['pass',`${passed} clear${unknown?` · ${unknown} N/A`:''}`]:['na','N/A'])]);
+  $('checks').innerHTML=rows.map(r=>row(r[0],r[1],r[2])).join('')+(s.hpNote?`<li><span>${ICON.warn}</span><span style="grid-column:2/4;font-size:12px;color:var(--amber)">${esc(s.hpNote)}</span></li>`:'');
   rows.forEach(r=>{if(r[1]==='fail')log(`Flag: ${r[0]} → ${r[2]}`,'bad');else if(r[1]==='warn')log(`Flag: ${r[0]} → ${r[2]}`,'warn')});
+  if(s.hpNote)log(s.hpNote,'warn');
+  /* liquidity ownership detail */
+  $('lpBox').innerHTML=s.lp.length?`<div class="ct" style="margin:14px 0 8px"><span>Who controls the liquidity</span><span class="mono">${s.lpSecured.toFixed(0)}% locked/burned</span></div>`+
+    `<ul class="holders">${s.lp.slice(0,4).map((h,i)=>`<li><span style="color:var(--dim)">${i+1}</span><span class="a"><a href="${EXPLORER}/address/${esc(h.addr)}" target="_blank" rel="noopener" title="${esc(h.addr)}">${esc(short(h.addr))}</a> <span style="color:${h.locked?'var(--sage)':'var(--dim)'}">${h.locked?'locked':h.contract?'contract':'wallet'}</span></span><span class="p">${h.pct.toFixed(1)}%</span></li>`).join('')}</ul>`+
+    `<p class="fine">On Uniswap v3/v4 the LP is an NFT position. A contract owner can be a locker GoPlus does not recognise yet, so check it on the explorer.</p>`
+    :'<p class="fine">No LP ownership data returned for this token.</p>';
+  log(s.lp.length?`Liquidity: ${s.lpSecured.toFixed(0)}% locked/burned${s.lpTop?`, largest unlocked LP holder ${s.lpTop.pct.toFixed(0)}%`:''}`:'Liquidity: no LP ownership data',s.lpTop&&s.lpTop.pct>50&&s.lpSecured<90?'bad':'');
+  /* holders, excluding pools and burn */
   $('sHold').textContent=s.holderCount!=null?s.holderCount.toLocaleString():'—';
+  const extra=[s.inPools?`${s.inPools.toFixed(1)}% in DEX pools`:'',s.burned?`${s.burned.toFixed(1)}% burned`:''].filter(Boolean).join(' · ');
+  $('topNote').textContent='Excludes DEX pools and burn addresses'+(extra?` (${extra})`:'')+'.';
   if(s.top10!=null){$('topPct').textContent=s.top10.toFixed(2)+'%';$('topBar').style.width=Math.min(100,s.top10)+'%';
     $('topBar').style.background=s.top10>50?'var(--crimson)':s.top10>30?'var(--amber)':'var(--silver)';
-    $('holders').innerHTML=s.holders.map((h,i)=>`<li><span style="color:var(--dim)">${i+1}</span><span class="a" title="${esc(h.addr)}">${esc(short(h.addr))}${h.tag?` <span style="color:var(--dim)">${esc(h.tag.trim())}</span>`:''}</span><span class="p">${h.pct.toFixed(2)}%</span></li>`).join('');
-    log(`Holders: top-10 concentration ${s.top10.toFixed(2)}%`,s.top10>50?'bad':'')}
+    $('holders').innerHTML=s.holders.map((h,i)=>`<li><span style="color:var(--dim)">${i+1}</span><span class="a"><a href="${EXPLORER}/address/${esc(h.addr)}" target="_blank" rel="noopener" title="${esc(h.addr)}">${esc(short(h.addr))}</a>${h.tag?` <span style="color:var(--dim)">${esc(h.tag)}</span>`:''}${h.addr.toLowerCase()===s.creator.toLowerCase()?' <span style="color:var(--amber)">creator</span>':''}</span><span class="p">${h.pct.toFixed(2)}%</span></li>`).join('');
+    log(`Holders: top ${s.holders.length} wallets hold ${s.top10.toFixed(2)}% (pools & burn excluded)`,s.top10>50?'bad':'')}
   else{$('topPct').textContent='N/A';$('topBar').style.width='0';$('holders').innerHTML='<li><span></span><span>No holder list returned</span><span></span></li>'}
 }
 function renderScore(r){
