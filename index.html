@@ -232,18 +232,18 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 <main id="top">
   <section class="hero" id="scanner">
     <div class="wrap">
-      <span class="eyebrow"><span class="dot"></span>Live · DexScreener + GoPlus Security</span>
+      <span class="eyebrow"><span class="dot"></span>Live · Robinhood Chain · ID 4663</span>
       <h1>Forensic verdicts on any token, before you sign.</h1>
-      <p class="lede">Paste a contract address or ticker. The OMEN Agent pulls live market structure and on-chain security flags, then scores the token on a deterministic 0–100 scale.</p>
+      <p class="lede">Built for Robinhood Chain. Paste a token address or ticker; the OMEN Agent pulls live market structure and on-chain security flags, then scores the token on a deterministic 0–100 scale.</p>
       <form class="scanner" id="scanForm" autocomplete="off">
-        <input id="caInput" aria-label="Contract address or ticker" placeholder="0x… contract address, Solana mint, or ticker" spellcheck="false">
+        <input id="caInput" aria-label="Contract address or ticker" placeholder="0x… Robinhood Chain token address, or ticker" spellcheck="false">
         <button class="btn primary" id="scanBtn" type="submit">Run Scan</button>
       </form>
       <div class="quick">
         <span class="lbl">Quick-Scan</span>
-        <button class="chip" data-ca="0x6982508145454Ce325dDbE47a25d4ec3d2311933">PEPE<i>ETH</i></button>
-        <button class="chip" data-ca="0x532f27101965dd16442E59d40670FaF5eBB142E4">BRETT<i>BASE</i></button>
-        <button class="chip" data-ca="EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm">WIF<i>SOL</i></button>
+        <button class="chip" data-ca="0x020bfC650A365f8BB26819deAAbF3E21291018b4">CASHCAT<i>HOOD</i></button>
+        <button class="chip" data-ca="0x5Cb6F181081301b44905F3ae15419112ecaBd8A6">PIPEDOG<i>HOOD</i></button>
+        <button class="chip" data-ca="0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1">FOX<i>HOOD</i></button>
       </div>
       <div class="status" id="status" role="status" aria-live="polite"></div>
     </div>
@@ -291,7 +291,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
           </div>
           <div class="card">
             <div class="ct"><span>Live chart · <span class="mono" id="pairLbl">—</span></span>
-              <span style="display:flex;gap:6px"><a class="toggle" id="dsLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Open ↗</a><button class="toggle" id="chartToggle" aria-pressed="true">Hide chart</button></span></div>
+              <span style="display:flex;gap:6px"><a class="toggle" id="exLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Explorer ↗</a><a class="toggle" id="dsLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Chart ↗</a><button class="toggle" id="chartToggle" aria-pressed="true">Hide chart</button></span></div>
             <div class="chartbox" id="chartBox"><div class="ph">Chart loads after the first scan.</div></div>
           </div>
         </div>
@@ -364,8 +364,9 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="card" id="changelog">
         <h2 style="font-size:24px;margin-bottom:18px">Engineering Changelog</h2>
         <ul class="cl">
+          <li><div class="ver">v0.5.0<small>Nov 2026</small></div><div><b>Robinhood Chain only</b><p>OMEN now scans Robinhood Chain (ID 4663) exclusively. Solana and other EVM chains were removed. Ticker search warns when several tokens share a symbol, since copycat tokens with inflated liquidity are common.</p></div></li>
           <li><div class="ver">v0.4.0<small>Nov 2026</small></div><div><b>Paper-mode simulator and order-flow radar</b><p>Modules 03 and 04 now read live pair data: price-impact estimate from pool depth, and buy/sell imbalance across 5m, 1h, 6h and 24h.</p></div></li>
-          <li><div class="ver">v0.3.0<small>Nov 2026</small></div><div><b>Solana security path</b><p>Added the GoPlus Solana endpoint. Mint authority and transfer-fee flags map into the same scoring engine; EVM-only checks are marked N/A rather than scored.</p></div></li>
+          <li><div class="ver">v0.3.0<small>Nov 2026</small></div><div><b>Multi-chain security path</b><p>GoPlus mapping for EVM chains and Solana. Superseded by v0.5.0, which narrows OMEN to Robinhood Chain.</p></div></li>
           <li><div class="ver">v0.2.0<small>Nov 2026</small></div><div><b>Deterministic scoring engine</b><p>Fixed deduction table with an itemised breakdown on every verdict. Honeypot detection short-circuits the score to 0.</p></div></li>
           <li><div class="ver">v0.1.0<small>Nov 2026</small></div><div><b>Terminal foundation</b><p>DexScreener ingestion with highest-liquidity pair selection, ticker fallback search, embedded chart, command palette.</p></div></li>
         </ul>
@@ -375,7 +376,9 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
         <details open><summary>Where does the data come from?</summary><p>Market data from <code>api.dexscreener.com</code> and security flags from <code>api.gopluslabs.io</code>, both called directly from your browser. There is no OMEN backend in between and no demo data.</p></details>
         <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Not open source −25, mintable −20, proxy −15, max tax &gt;5% −15 or &gt;15% −35, liquidity &lt;$50k −20 or &lt;$10k −35, top-10 holders &gt;50% −20. ≥75 is Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
         <details><summary>Which pair is used when a token trades in many pools?</summary><p>The pair with the highest <code>liquidity.usd</code>. Thin pools are easy to manipulate, so the deepest pool is the most honest price.</p></details>
-        <details><summary>Why do some checks show N/A on Solana?</summary><p>Proxy contracts, open-source verification and honeypot simulation are EVM concepts. On Solana the Agent scores mint authority and transfer fees instead and leaves the rest unscored.</p></details>
+        <details><summary>Which chain does OMEN support?</summary><p>Only Robinhood Chain, the Ethereum L2 by Robinhood (chain ID <code>4663</code>, ETH for gas). Tokens on other chains are rejected. Verify any address on <a href="https://robinhoodchain.blockscout.com" target="_blank" rel="noopener">robinhoodchain.blockscout.com</a>.</p></details>
+        <details><summary>Why scan by address instead of ticker?</summary><p>Anyone can deploy a token with the same name. A copycat can show more liquidity than the original, and ticker search picks the deepest pool, so it can land on the fake. When several tokens share a ticker the Agent warns you; always confirm the contract address from the project's official links.</p></details>
+        <details><summary>Can GoPlus be wrong on Robinhood Chain?</summary><p>Yes. Coverage is newer here, some fields (such as taxes) can come back empty and show N/A, and some factory-deployed tokens have been reported as false honeypot positives. Treat the score as a first filter, then check the contract on the explorer.</p></details>
         <details><summary>Does top-10 concentration include LP and burn wallets?</summary><p>Yes, it uses GoPlus' raw holder list. A pool or burn address in the top 10 can inflate the figure; check the labelled addresses below the bar.</p></details>
         <details><summary>Does Sign In take custody of anything?</summary><p>No. It asks your wallet for its public address only. OMEN never requests a seed phrase, private key or transaction signature.</p></details>
       </div>
@@ -398,8 +401,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <button class="x" id="closeSign" aria-label="Close">×</button>
     <h3 id="signTitle">Sign In</h3>
     <p>Non-custodial. OMEN reads your public address only; it never asks for a seed phrase or private key.</p>
-    <button class="wallet" id="wEvm">EVM wallet <small>MetaMask, Rabby, Coinbase</small></button>
-    <button class="wallet" id="wSol">Solana wallet <small>Phantom, Solflare</small></button>
+    <button class="wallet" id="wEvm">Connect wallet <small>MetaMask, Rabby, Coinbase · Robinhood Chain</small></button>
     <div class="status" id="signStatus"></div>
   </div>
 </div>
@@ -455,12 +457,12 @@ try{
 {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const CHAIN={ethereum:'1',base:'8453',bsc:'56',arbitrum:'42161',polygon:'137',optimism:'10',avalanche:'43114'};
-const CHAIN_NAME={ethereum:'Ethereum',base:'Base',bsc:'BNB Chain',arbitrum:'Arbitrum',polygon:'Polygon',optimism:'Optimism',avalanche:'Avalanche',solana:'Solana'};
+const CHAIN={robinhood:'4663'};const EXPLORER='https://robinhoodchain.blockscout.com';
+const CHAIN_NAME={robinhood:'Robinhood Chain'};
 const QUICK=[
-  {sym:'PEPE',chain:'ETH',ca:'0x6982508145454Ce325dDbE47a25d4ec3d2311933'},
-  {sym:'BRETT',chain:'BASE',ca:'0x532f27101965dd16442E59d40670FaF5eBB142E4'},
-  {sym:'WIF',chain:'SOL',ca:'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm'}];
+  {sym:'CASHCAT',chain:'HOOD',ca:'0x020bfC650A365f8BB26819deAAbF3E21291018b4'},
+  {sym:'PIPEDOG',chain:'HOOD',ca:'0x5Cb6F181081301b44905F3ae15419112ecaBd8A6'},
+  {sym:'FOX',chain:'HOOD',ca:'0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1'}];
 let current=null,chartOn=true,busy=false;
 
 /* formatting */
@@ -485,26 +487,30 @@ async function getJSON(url,label){
   catch(e){throw new Error(e.name==='AbortError'?`${label} timed out`:e.message)}
   finally{clearTimeout(to)}
 }
-const bestPair=pairs=>(pairs||[]).filter(p=>p&&p.baseToken).sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
-const isAddr=q=>/^0x[a-fA-F0-9]{40}$/.test(q)||/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q);
+const onHood=pairs=>(pairs||[]).filter(p=>p&&p.baseToken&&p.chainId==='robinhood');
+const bestPair=pairs=>onHood(pairs).sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
+const isAddr=q=>/^0x[a-fA-F0-9]{40}$/.test(q);
 
 /* ---------- scan pipeline ---------- */
 async function scan(q){
   q=(q||'').trim();if(!q||busy)return;busy=true;$('scanBtn').disabled=true;$('scanBtn').textContent='Scanning…';
   status('Querying DexScreener…');log(`Agent: scan requested for "${q}"`,'inf');
   try{
-    let pair=null;
+    let pair=null,warn='';
     if(isAddr(q)){
       log('DexScreener: GET /latest/dex/tokens/'+short(q));
       const d=await getJSON('https://api.dexscreener.com/latest/dex/tokens/'+encodeURIComponent(q),'DexScreener');
-      pair=bestPair(d.pairs);
-    }
-    if(!pair){
-      log('DexScreener: fallback search q='+q);
+      pair=bestPair((d.pairs||[]).filter(x=>x.baseToken?.address?.toLowerCase()===q.toLowerCase()))||bestPair(d.pairs);
+      if(!pair)throw new Error((d.pairs||[]).length?'This token has no pool on Robinhood Chain. OMEN scans Robinhood Chain only.':'No Robinhood Chain pool found for this address.');
+    }else{
+      log('DexScreener: ticker search q='+q+' (Robinhood Chain only)');
       const d=await getJSON('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q),'DexScreener');
       pair=bestPair(d.pairs);
+      if(!pair)throw new Error('No Robinhood Chain token found for "'+q+'".');
+      const sym=pair.baseToken.symbol.trim().toLowerCase();
+      const twins=[...new Set(onHood(d.pairs).filter(p=>p.baseToken.symbol.trim().toLowerCase()===sym).map(p=>p.baseToken.address.toLowerCase()))];
+      if(twins.length>1){warn=`${twins.length} different Robinhood Chain tokens use the ticker $${pair.baseToken.symbol}. Showing the one with the deepest pool, which may be a copycat. Scan by contract address to be sure.`;log('Warning: '+warn,'warn')}
     }
-    if(!pair)throw new Error('No trading pairs found for this query.');
     log(`Selected deepest pool: ${pair.dexId} ${pair.baseToken.symbol}/${pair.quoteToken?.symbol||'?'} · liq ${usd(pair.liquidity?.usd)}`,'ok');
     const ca=pair.baseToken.address,chain=pair.chainId;
     renderMarket(pair);
@@ -516,33 +522,25 @@ async function scan(q){
     renderSecurity(chain,sec,secErr);renderScore(res);renderDesk();
     $('scanTime').textContent='Scanned '+now()+' · '+(CHAIN_NAME[chain]||chain);
     log(`Verdict: ${res.verdict} (${res.score}/100)`,res.cls==='b-safe'?'ok':res.cls==='b-caut'?'warn':'bad');
-    status(secErr?'Market data loaded. Security data unavailable: '+secErr:'Scan complete.',!!secErr);
+    status(warn?'⚠ '+warn:secErr?'Market data loaded. Security data unavailable: '+secErr:'Scan complete.',!!(warn||secErr));
   }catch(e){status(e.message,true);log('Scan failed: '+e.message,'bad')}
   finally{busy=false;$('scanBtn').disabled=false;$('scanBtn').textContent='Run Scan'}
 }
 
 async function goplus(chain,ca){
-  let url,sol=chain==='solana';
-  if(sol)url='https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses='+encodeURIComponent(ca);
-  else{const id=CHAIN[chain];if(!id)throw new Error(`chain "${chain}" not supported by GoPlus mapping`);
-    url=`https://api.gopluslabs.io/api/v1/token_security/${id}?contract_addresses=${encodeURIComponent(ca)}`}
-  log(`GoPlus: GET ${sol?'/solana/token_security':'/token_security/'+CHAIN[chain]}`);
+  const id=CHAIN[chain];if(!id)throw new Error(`chain "${chain}" is not Robinhood Chain`);
+  const url=`https://api.gopluslabs.io/api/v1/token_security/${id}?contract_addresses=${encodeURIComponent(ca)}`;
+  log('GoPlus: GET /token_security/'+id);
   const d=await getJSON(url,'GoPlus');
   if(d.code!==1&&d.code!=='1'&&!d.result)throw new Error(d.message||'GoPlus returned no result');
   const r=d.result||{};const key=Object.keys(r).find(k=>k.toLowerCase()===ca.toLowerCase())||Object.keys(r)[0];
   if(!key)throw new Error('GoPlus has no record for this token yet');
   log('GoPlus: security record received','ok');
-  return normalize(r[key],sol);
+  return normalize(r[key]);
 }
-function normalize(t,sol){
+function normalize(t){
   const holders=(t.holders||[]).slice(0,10).map(h=>({addr:h.address||h.account||h.token_account||'',pct:(+h.percent||0)*100,tag:h.tag||(h.is_contract==1?'contract':'')+(h.is_locked==1?' locked':'')}));
   const top10=holders.reduce((s,h)=>s+h.pct,0);
-  if(sol){
-    const st=o=>o==null?null:(typeof o==='object'?o.status:o);
-    const fee=t.transfer_fee&&typeof t.transfer_fee==='object'?num(t.transfer_fee.current_fee_rate?.fee_rate??t.transfer_fee.fee_rate):null;
-    return {sol:true,honeypot:null,open:null,proxy:null,mint:st(t.mintable)==null?null:st(t.mintable)=='1',freeze:st(t.freezable)==null?null:st(t.freezable)=='1',
-      buyTax:fee!=null?fee/100:null,sellTax:fee!=null?fee/100:null,holderCount:num(t.holder_count),holders,top10:holders.length?top10:null};
-  }
   const flag=v=>v===''||v==null?null:v=='1';
   return {sol:false,honeypot:flag(t.is_honeypot),open:flag(t.is_open_source),proxy:flag(t.is_proxy),mint:flag(t.is_mintable),
     buyTax:num(t.buy_tax)!=null?num(t.buy_tax)*100:null,sellTax:num(t.sell_tax)!=null?num(t.sell_tax)*100:null,
@@ -555,7 +553,7 @@ function scoreToken(pair,s){
   if(s&&s.honeypot===true)return {score:0,verdict:'DO NOT BUY — HONEYPOT',cls:'b-crit',d:[['Honeypot detected','→ 0']]};
   if(s){
     if(s.open===false)d.push(['Source not verified',-25]);
-    if(s.mint===true)d.push([s.sol?'Mint authority active':'Mintable supply',-20]);
+    if(s.mint===true)d.push(['Mintable supply',-20]);
     if(s.proxy===true)d.push(['Upgradeable proxy',-15]);
     const tax=Math.max(s.buyTax||0,s.sellTax||0);
     if(tax>15)d.push([`Tax ${tax.toFixed(1)}% > 15%`,-35]);else if(tax>5)d.push([`Tax ${tax.toFixed(1)}% > 5%`,-15]);
@@ -585,6 +583,7 @@ function renderMarket(p){
   $('txTotal').textContent=tot.toLocaleString()+' txns';
   $('pairLbl').textContent=`${b.symbol}/${p.quoteToken?.symbol||''} ${short(p.pairAddress)}`;
   $('dsLink').href=p.url||`https://dexscreener.com/${p.chainId}/${p.pairAddress}`;
+  $('exLink').href=`${EXPLORER}/token/${b.address}`;
   log(`Market: price ${price(p.priceUsd)} · 24h ${pct(c)} · vol ${usd(p.volume?.h24)} · FDV ${usd(p.fdv)}`);
   chartPair=p;renderChart();
 }
@@ -604,7 +603,7 @@ const ICON={pass:'<svg class="ic" viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" s
   warn:'<svg class="ic" viewBox="0 0 16 16"><path d="M8 3v6M8 11.5v1.5" stroke="#D99B26" stroke-width="1.8"/></svg>',
   na:'<svg class="ic" viewBox="0 0 16 16"><path d="M4 8h8" stroke="#5B6370" stroke-width="1.8"/></svg>'};
 function renderSecurity(chain,s,err){
-  $('gpChain').textContent=chain==='solana'?'solana':'chain '+(CHAIN[chain]||chain);
+  $('gpChain').textContent='chain '+(CHAIN[chain]||chain);
   if(!s){$('checks').innerHTML=`<li><span>${ICON.warn}</span><span>GoPlus data unavailable</span><span class="r" style="color:var(--amber)">${esc(err||'')}</span></li>`;
     $('sHold').textContent='—';$('topPct').textContent='—';$('topBar').style.width='0';$('holders').innerHTML='';return}
   const row=(label,state,val)=>`<li><span>${ICON[state]}</span><span>${esc(label)}</span><span class="r" style="color:${state==='pass'?'var(--sage)':state==='fail'?'var(--crimson)':state==='warn'?'var(--amber)':'var(--dim)'}">${esc(val)}</span></li>`;
@@ -614,9 +613,8 @@ function renderSecurity(chain,s,err){
     ['Honeypot simulation',...b(s.honeypot,false,'Detected','Clear')],
     ['Source code verified',...b(s.open,true,'Verified','Unverified')],
     ['Proxy / upgradeable',...b(s.proxy,false,'Proxy','None')],
-    [s.sol?'Mint authority':'Mint function',...b(s.mint,false,'Active','Renounced')],
+    ['Mint function',...b(s.mint,false,'Active','Renounced')],
   ];
-  if(s.sol)rows.push(['Freeze authority',...(s.freeze==null?['na','N/A']:s.freeze?['warn','Active']:['pass','None'])]);
   rows.push(['Buy tax',...taxState(s.buyTax)],['Sell tax',...taxState(s.sellTax)]);
   $('checks').innerHTML=rows.map(r=>row(r[0],r[1],r[2])).join('');
   rows.forEach(r=>{if(r[1]==='fail')log(`Flag: ${r[0]} → ${r[2]}`,'bad');else if(r[1]==='warn')log(`Flag: ${r[0]} → ${r[2]}`,'warn')});
@@ -713,10 +711,10 @@ $('openSignin').onclick=()=>openM('signModal');$('closeSign').onclick=()=>closeM
 const signed=(addr)=>{$('openSignin').textContent=short(addr);$('signStatus').textContent='Connected: '+addr;$('signStatus').className='status';log('Sign In: wallet connected '+short(addr),'ok');setTimeout(()=>closeM('signModal'),900)};
 $('wEvm').onclick=async()=>{const eth=window.ethereum;
   if(!eth){$('signStatus').textContent='No EVM wallet detected in this browser.';$('signStatus').className='status err';return}
-  try{const [a]=await eth.request({method:'eth_requestAccounts'});signed(a)}catch(e){$('signStatus').textContent=e.message||'Request rejected';$('signStatus').className='status err'}};
-$('wSol').onclick=async()=>{const sol=window.phantom?.solana||window.solana||window.solflare;
-  if(!sol){$('signStatus').textContent='No Solana wallet detected in this browser.';$('signStatus').className='status err';return}
-  try{const r=await sol.connect();signed((r?.publicKey||sol.publicKey).toString())}catch(e){$('signStatus').textContent=e.message||'Request rejected';$('signStatus').className='status err'}};
+  try{const [a]=await eth.request({method:'eth_requestAccounts'});
+    try{await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x1237'}]})}
+    catch(e){if(e&&e.code===4902)await eth.request({method:'wallet_addEthereumChain',params:[{chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']}]})}
+    signed(a)}catch(e){$('signStatus').textContent=e.message||'Request rejected';$('signStatus').className='status err'}};
 
 /* ---------- wiring ---------- */
 $('scanForm').addEventListener('submit',e=>{e.preventDefault();scan($('caInput').value)});
