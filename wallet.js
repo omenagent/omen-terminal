@@ -1,4 +1,4 @@
-/* OMEN Wallet Forensics (v0.8.0)
+/* OMEN Wallet Forensics (v0.8.1)
    Read-only portfolio scan for Robinhood Chain (chain ID 4663).
    Data: Blockscout (holdings, scam reputation, activity), DexScreener (market),
          GoPlus (token security + address threat intel).
@@ -207,6 +207,12 @@ function score(pair, raw, pv) {
   if (!raw && !(pv && pv.official)) return {score: null, verdict: 'UNVERIFIED — NO SECURITY DATA', cls: 'b-caut', d: [['No security record from GoPlus', 'unscored']]};
   return window.scoreToken(p, raw ? window.normalize(raw, p) : null, pv || null);
 }
+/* view a pool from its quote token's side (same as the page's asBase) */
+const flip = p => { if (typeof window.asBase === 'function') return window.asBase(p);
+  const pn = +p.priceNative, pu = +p.priceUsd, sw = o => o && {buys: o.sells, sells: o.buys};
+  return Object.assign({}, p, {baseToken: p.quoteToken, quoteToken: p.baseToken, priceUsd: pn && pu ? String(pu / pn) : null,
+    priceNative: pn ? String(1 / pn) : null, fdv: null, marketCap: null, priceChange: {},
+    txns: p.txns && {m5: sw(p.txns.m5), h1: sw(p.txns.h1), h6: sw(p.txns.h6), h24: sw(p.txns.h24)}, quoteSide: true}); };
 /* provenance (official Stock Token check, deployer history) from the page's own engine, if present */
 const getProvenance = ca => typeof window.provenance === 'function' ? window.provenance(ca).catch(() => null) : Promise.resolve(null);
 
@@ -243,17 +249,21 @@ async function scanWallet(addr) {
     const totalTokens = list.length;
     agentLog(`Wallet: ${totalTokens} ERC-20 holdings found`, 'ok');
 
-    /* market data, 30 tokens per DexScreener call */
-    const best = {};
+    /* market data, 30 tokens per DexScreener call; a token that only trades as the
+       quote side (USDG in X/USDG pools) is read from its side of the deepest pool */
+    const best = {}, bestQ = {};
+    const liqOf = p => p && p.liquidity && p.liquidity.usd || 0;
     for (let i = 0; i < list.length; i += 30) {
       const csv = list.slice(i, i + 30).map(r => r.token.address).join(',');
       const d = await getJSON('https://api.dexscreener.com/latest/dex/tokens/' + csv, 'DexScreener').catch(() => null);
       (d && d.pairs || []).forEach(p => {
         const k = (p.baseToken && p.baseToken.address || '').toLowerCase();
-        if (k && (!best[k] || (p.liquidity && p.liquidity.usd || 0) > (best[k].liquidity && best[k].liquidity.usd || 0))) best[k] = p;
+        if (k && (!best[k] || liqOf(p) > liqOf(best[k]))) best[k] = p;
+        const kq = (p.quoteToken && p.quoteToken.address || '').toLowerCase();
+        if (kq && (!bestQ[kq] || liqOf(p) > liqOf(bestQ[kq]))) bestQ[kq] = p;
       });
     }
-    list.forEach(r => { r.pair = best[r.token.address.toLowerCase()] || null;
+    list.forEach(r => { const a = r.token.address.toLowerCase(); r.pair = best[a] || (bestQ[a] ? flip(bestQ[a]) : null);
       if (r.val == null && r.pair && r.pair.priceUsd) r.val = r.bal * Number(r.pair.priceUsd); });
     list.sort((a, b) => (b.val || 0) - (a.val || 0) || (b.scam ? 1 : 0) - (a.scam ? 1 : 0));
 
@@ -331,7 +341,13 @@ function mount() {
 
   /* changelog + FAQ */
   const cl = document.querySelector('#changelog .cl');
-  if (cl) cl.insertAdjacentHTML('afterbegin', `<li><div class="ver">v0.8.0<small>Nov 2026</small></div><div><b>Wallet Forensics</b><p>Connect a wallet or paste an address: every ERC-20 holding is scored by the same engine, with value-weighted portfolio safety and an address threat-intel check from GoPlus and Blockscout.</p></div></li>`);
+  if (cl) {
+    /* insert in version order, so later entries written in index.html stay on top */
+    const vnum = t => { const m = String(t).match(/v(\d+)\.(\d+)\.(\d+)/); return m ? (+m[1]) * 1e6 + (+m[2]) * 1e3 + (+m[3]) : 0; };
+    const html = `<li><div class="ver">v0.8.0<small>Nov 2026</small></div><div><b>Wallet Forensics</b><p>Connect a wallet or paste an address: every ERC-20 holding is scored by the same engine, with value-weighted portfolio safety and an address threat-intel check from GoPlus and Blockscout.</p></div></li>`;
+    const older = [...cl.children].find(li => vnum((li.querySelector('.ver') || li).textContent) < vnum('v0.8.0'));
+    older ? older.insertAdjacentHTML('beforebegin', html) : cl.insertAdjacentHTML('beforeend', html);
+  }
   const faq = $('faq');
   if (faq) faq.insertAdjacentHTML('beforeend', `<details><summary>What does connecting a wallet do?</summary><p>OMEN reads the public address only. It lists the wallet’s Robinhood Chain tokens from Blockscout, scores each one with the same engine as the scanner, and checks the address against GoPlus threat-intel. No signature, approval or transaction is ever requested.</p></details>`);
 

@@ -393,6 +393,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="card" id="changelog">
         <h2 style="font-size:24px;margin-bottom:18px">Engineering Changelog</h2>
         <ul class="cl">
+          <li><div class="ver">v0.8.1<small>Nov 2026</small></div><div><b>Official stablecoins and fake-USDG detection</b><p>USDG is recognised by its exact Paxos contract address and scored on the issuer path, like official Stock Tokens. Tokens that copy a stablecoin ticker or name are flagged as fakes (−40).</p></div></li>
           <li><div class="ver">v0.7.0<small>Nov 2026</small></div><div><b>Shareable scans, provenance, watchlist</b><p>Every scan gets its own link. Official Stock Tokens are verified on-chain against Robinhood's StockFactory, and look-alikes are flagged. Token age and deployer history come from Blockscout. Watchlist and recent scans are saved per wallet on this device.</p></div></li>
           <li><div class="ver">v0.6.0<small>Nov 2026</small></div><div><b>Soft-rug and owner-power detection</b><p>Scores LP ownership and locks, 13 owner and trading-control flags, and deployer honeypot history. Top-10 now excludes pools and burn addresses. UERC20 factory false positives are handled.</p></div></li>
           <li><div class="ver">v0.5.0<small>Nov 2026</small></div><div><b>Robinhood Chain only</b><p>OMEN now scans Robinhood Chain (ID 4663) exclusively. Solana and other EVM chains were removed. Ticker search warns when several tokens share a symbol, since copycat tokens with inflated liquidity are common.</p></div></li>
@@ -405,13 +406,14 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="card" id="faq">
         <h2 style="font-size:24px;margin-bottom:18px">Technical FAQ</h2>
         <details open><summary>Where does the data come from?</summary><p>Market data from <code>api.dexscreener.com</code> and security flags from <code>api.gopluslabs.io</code>, both called directly from your browser. There is no OMEN backend in between and no demo data.</p></details>
-        <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Contract: not open source −25, mintable −20, proxy −15, tax &gt;5% −15 or &gt;15% −35. Owner powers: cannot sell all −40, owner can change balances −35, creator made honeypots before −30, hidden owner / reclaimable ownership / self-destruct −25 each, buying restricted or tax changeable −20, pausable transfers / blacklist / per-wallet tax −15, cooldown −10, external calls −5. Soft-rug: one wallet controls &gt;50% of unlocked LP −25, otherwise &lt;90% of LP locked or burned −10. Origin: impersonates an official Stock Token −40, flagged as scam on the explorer −40, token younger than 24h −20 or 7 days −10, deployer launched 10+ contracts −20 or 5+ −10, deployer holds &gt;25% −20 or &gt;10% −10. Market: liquidity &lt;$50k −20 or &lt;$10k −35, top-10 wallets &gt;50% −20. Official Robinhood Stock Tokens are scored on DEX liquidity only, because pausing, upgrades and compliance blacklists are expected for a regulated issuer. ≥75 Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
+        <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Contract: not open source −25, mintable −20, proxy −15, tax &gt;5% −15 or &gt;15% −35. Owner powers: cannot sell all −40, owner can change balances −35, creator made honeypots before −30, hidden owner / reclaimable ownership / self-destruct −25 each, buying restricted or tax changeable −20, pausable transfers / blacklist / per-wallet tax −15, cooldown −10, external calls −5. Soft-rug: one wallet controls &gt;50% of unlocked LP −25, otherwise &lt;90% of LP locked or burned −10. Origin: impersonates an official Stock Token or stablecoin −40, flagged as scam on the explorer −40, token younger than 24h −20 or 7 days −10, deployer launched 10+ contracts −20 or 5+ −10, deployer holds &gt;25% −20 or &gt;10% −10. Market: liquidity &lt;$50k −20 or &lt;$10k −35, top-10 wallets &gt;50% −20. Official Robinhood Stock Tokens are scored on DEX liquidity only, because pausing, upgrades and compliance blacklists are expected for a regulated issuer. ≥75 Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
         <details><summary>How does OMEN know a Stock Token is official?</summary><p>Every official Robinhood Stock Token is deployed by one contract, the StockFactory at <code>0x4783…C046</code>. OMEN asks the Robinhood Chain explorer who created the token. If it is the StockFactory, the token gets the Official badge. If the ticker or name copies a stock but the creator is anyone else, it is flagged as a look-alike.</p></details>
         <details><summary>Can I share a scan?</summary><p>Yes. The address bar updates to <code>#0x…</code> after every scan, so the link opens the same token for anyone. Use Copy link, Share on X or Telegram above the dashboard.</p></details>
         <details><summary>What is a soft-rug and how does OMEN catch it?</summary><p>A token with clean code whose liquidity sits in one wallet. When buyers pile in, that wallet pulls the pool and holders are left with nothing to sell into. OMEN reads who owns the LP positions and how much is locked or burned, and deducts when a single unlocked owner controls most of it.</p></details>
         <details><summary>Which pair is used when a token trades in many pools?</summary><p>The pair with the highest <code>liquidity.usd</code>. Thin pools are easy to manipulate, so the deepest pool is the most honest price.</p></details>
         <details><summary>Which chain does OMEN support?</summary><p>Only Robinhood Chain, the Ethereum L2 by Robinhood (chain ID <code>4663</code>, ETH for gas). Tokens on other chains are rejected. Verify any address on <a href="https://robinhoodchain.blockscout.com" target="_blank" rel="noopener">robinhoodchain.blockscout.com</a>.</p></details>
         <details><summary>Why scan by address instead of ticker?</summary><p>Anyone can deploy a token with the same name. A copycat can show more liquidity than the original, and ticker search picks the deepest pool, so it can land on the fake. When several tokens share a ticker the Agent warns you; always confirm the contract address from the project's official links.</p></details>
+        <details><summary>How does OMEN treat stablecoins?</summary><p>Official stablecoins are recognised by exact contract address, never by ticker. On Robinhood Chain that is USDG (Global Dollar, issued by Paxos) at <code>0x5fc5…d168</code>. Its upgradeable proxy, pause and compliance controls are issuer controls, so they are not scored as rug signals. Any other token that uses a stablecoin ticker or name is flagged as a fake (−40).</p></details>
         <details><summary>Can GoPlus be wrong on Robinhood Chain?</summary><p>Yes. Tokens from the Uniswap UERC20 v2.0.0 factory are wrongly flagged as honeypots with a hidden owner. OMEN recognises that factory, marks those flags as disputed, and only clears the honeypot flag when the token has real sells in the last 24 hours. Some fields can also come back empty and show N/A; treat the score as a first filter and check the explorer.</p></details>
         <details><summary>Does top-10 concentration include LP and burn wallets?</summary><p>No. DEX pools (including the Uniswap v4 PoolManager) and burn addresses are removed first, and their shares are shown separately, so the bar measures real wallets only.</p></details>
         <details><summary>Does Sign In take custody of anything?</summary><p>No. It asks your wallet for its public address only. OMEN never requests a seed phrase, private key or transaction signature.</p></details>
@@ -523,6 +525,11 @@ async function getJSON(url,label){
 }
 const onHood=pairs=>(pairs||[]).filter(p=>p&&p.baseToken&&p.chainId==='robinhood');
 const bestPair=pairs=>onHood(pairs).sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
+/* a token that only trades as the quote side (USDG in X/USDG pools): read the deepest pool from its side */
+const asBase=p=>{if(!p)return null;const pn=+p.priceNative,pu=+p.priceUsd;const sw=o=>o&&{buys:o.sells,sells:o.buys};
+  return {...p,info:null,baseToken:p.quoteToken,quoteToken:p.baseToken,priceUsd:pn&&pu?String(pu/pn):null,priceNative:pn?String(1/pn):null,fdv:null,marketCap:null,priceChange:{},
+    txns:p.txns&&{m5:sw(p.txns.m5),h1:sw(p.txns.h1),h6:sw(p.txns.h6),h24:sw(p.txns.h24)},quoteSide:true}};
+window.asBase=asBase;
 const isAddr=q=>/^0x[a-fA-F0-9]{40}$/.test(q);
 
 /* ---------- scan pipeline ---------- */
@@ -534,8 +541,15 @@ async function scan(q){
     if(isAddr(q)){
       log('DexScreener: GET /latest/dex/tokens/'+short(q));
       const d=await getJSON('https://api.dexscreener.com/latest/dex/tokens/'+encodeURIComponent(q),'DexScreener');lastPairs=d.pairs||[];
-      pair=bestPair((d.pairs||[]).filter(x=>x.baseToken?.address?.toLowerCase()===q.toLowerCase()))||bestPair(d.pairs);
-      if(!pair)throw new Error((d.pairs||[]).length?'This token has no pool on Robinhood Chain. OMEN scans Robinhood Chain only.':'No Robinhood Chain pool found for this address.');
+      pair=bestPair((d.pairs||[]).filter(x=>x.baseToken?.address?.toLowerCase()===q.toLowerCase()))
+        ||asBase(bestPair((d.pairs||[]).filter(x=>x.quoteToken?.address?.toLowerCase()===q.toLowerCase())))
+        ||bestPair(d.pairs);
+      if(pair&&pair.quoteSide)log(`DexScreener: token trades as the quote side; using deepest pool ${pair.quoteToken.symbol}/${pair.baseToken.symbol}`,'inf');
+      if(!pair){
+        const pv0=await provenance(q).catch(()=>null);
+        if(pv0&&pv0.stableImpersonation){log('Warning: ticker/name copies a stablecoin but this is not the official contract','bad');throw new Error('Fake stablecoin: this contract copies a stablecoin ticker or name and has no trading pool. Official USDG on Robinhood Chain is 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168.')}
+        throw new Error((d.pairs||[]).length?'This token has no pool on Robinhood Chain. OMEN scans Robinhood Chain only.':'No Robinhood Chain pool found for this address.');
+      }
     }else{
       log('DexScreener: ticker search q='+q+' (Robinhood Chain only)');
       const d=await getJSON('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q),'DexScreener');lastPairs=d.pairs||[];
@@ -551,13 +565,14 @@ async function scan(q){
     status('Querying GoPlus Security…');
     let sec=null,secErr=null;
     let pv=null,pvErr=null;
-    const pvJob=provenance(ca).then(x=>{pv=x;log(pv.official?'Blockscout: deployed by Robinhood StockFactory (official Stock Token)':'Blockscout: deployer '+short(pv.creator)+(pv.deployed!=null?`, ${pv.deployed}${pv.deployedPartial?'+':''} contracts deployed`:''),pv.official?'ok':'')}).catch(e=>{pvErr=e.message;log('Blockscout: '+e.message,'warn')});
+    const pvJob=provenance(ca).then(x=>{pv=x;log(pv.stable?'Blockscout: official '+pv.stable.sym+' stablecoin contract ('+pv.stable.issuer+')':pv.official?'Blockscout: deployed by Robinhood StockFactory (official Stock Token)':'Blockscout: deployer '+short(pv.creator)+(pv.deployed!=null?`, ${pv.deployed}${pv.deployedPartial?'+':''} contracts deployed`:''),(pv.official||pv.stable)?'ok':'')}).catch(e=>{pvErr=e.message;log('Blockscout: '+e.message,'warn')});
     try{sec=await goplus(chain,ca,pair)}catch(e){secErr=e.message;log('GoPlus: '+e.message,'bad')}
     await pvJob;
     if(pv){const firstPair=Math.min(...(lastPairs||[]).filter(x=>x.chainId==='robinhood'&&x.baseToken?.address?.toLowerCase()===ca.toLowerCase()&&x.pairCreatedAt).map(x=>x.pairCreatedAt),Infinity);
       pv.ageMs=pv.createdAt||(isFinite(firstPair)?firstPair:null);pv.ageSrc=pv.createdAt?'contract':isFinite(firstPair)?'first pool':'';
       pv.impersonation=!pv.official&&(STOCK_SYMS.has(pair.baseToken.symbol.trim().toUpperCase())||/robinhood token/i.test(pair.baseToken.name||''));
-      if(pv.impersonation)log('Warning: name/ticker matches an official Stock Token but it was not deployed by Robinhood StockFactory','bad')}
+      if(pv.impersonation)log('Warning: name/ticker matches an official Stock Token but it was not deployed by Robinhood StockFactory','bad');
+      if(pv.stableImpersonation)log('Warning: ticker/name copies a stablecoin but this is not the official contract','bad')}
     const res=scoreToken(pair,sec,pv);
     current={pair,sec,res,chain,ca,pv,logo:logoCache[ca.toLowerCase()]||safeImg(pair.info?.imageUrl)};
     if(pv&&!$('tokIcon').dataset.logo)setIcon($('tokIcon'),logoList(pair,pv),pair.baseToken.symbol,ca);
@@ -566,7 +581,14 @@ async function scan(q){
     $('scanTime').textContent='Scanned '+now()+' · '+(CHAIN_NAME[chain]||chain);
     log(`Verdict: ${res.verdict} (${res.score}/100)`,res.cls==='b-safe'?'ok':res.cls==='b-caut'?'warn':'bad');
     status(warn?'⚠ '+warn:secErr?'Market data loaded. Security data unavailable: '+secErr:'Scan complete.',!!(warn||secErr));
-  }catch(e){status(e.message,true);log('Scan failed: '+e.message,'bad')}
+  }catch(e){status(e.message,true);log('Scan failed: '+e.message,'bad');
+    /* never leave the previous token's verdict on screen after a failed scan */
+    const fake=/^Fake stablecoin/.test(e.message);
+    $('tokName').textContent=fake?'Fake stablecoin':'Scan failed';$('tokMeta').textContent=short(q);{const ic=$('tokIcon');ic.innerHTML='';ic.textContent=fake?'!':'—';ic.dataset.logo='';ic.style.background='';if($('noLogo'))$('noLogo').textContent='';}
+    $('score').textContent=fake?'0':'—';$('gArc').style.strokeDashoffset=326.7;$('deds').innerHTML='';
+    $('verdict').className='badge '+(fake?'b-crit':'b-idle');$('verdict').textContent=fake?'FAKE STABLECOIN — DO NOT USE':'SCAN FAILED';
+    if($('offBadge'))$('offBadge').innerHTML=fake?'<div class="badge b-crit" style="margin-bottom:12px">⚠ FAKE STABLECOIN · NOT THE OFFICIAL CONTRACT</div>':'';
+  }
   finally{busy=false;$('scanBtn').disabled=false;$('scanBtn').textContent='Run Scan'}
 }
 
@@ -629,6 +651,13 @@ function normalize(t,pair){
 function scoreToken(pair,s,pv){
   const d=[];let score=100;const liq=pair.liquidity?.usd||0;const sells=pair.txns?.h24?.sells||0;
   const official=!!pv?.official;
+  if(pv?.stable){
+    /* official stablecoin: upgradeable proxy, pause, freeze and compliance blacklist are issuer controls, not rug signals */
+    d.push([`Official stablecoin, issued by ${pv.stable.issuer}: issuer controls exempt`,'✓']);
+    if(liq<1e4)d.push([`DEX liquidity ${usd(liq)} < $10K`,-35]);else if(liq<5e4)d.push([`DEX liquidity ${usd(liq)} < $50K`,-20]);
+    d.forEach(x=>{if(typeof x[1]==='number')score+=x[1]});score=Math.max(0,Math.min(100,score));
+    return {score,verdict:score>=75?'OFFICIAL STABLECOIN — SAFE TO HOLD':score>=45?'OFFICIAL STABLECOIN — THIN DEX LIQUIDITY':'OFFICIAL STABLECOIN — ILLIQUID ON DEX',cls:score>=75?'b-safe':score>=45?'b-caut':'b-crit',d};
+  }
   if(official){
     /* regulated issuer: pausable, upgradeable, compliance blacklist are expected, not rug signals */
     d.push(['Official Robinhood Stock Token: issuer controls exempt','✓']);
@@ -638,6 +667,7 @@ function scoreToken(pair,s,pv){
   }
   if(pv){
     if(pv.impersonation)d.push(['Impersonates an official Stock Token',-40]);
+    if(pv.stableImpersonation)d.push(['Fake stablecoin: copies the ticker or name, not the official contract',-40]);
     if(pv.tokenScam||pv.creatorScam)d.push(['Flagged as scam on explorer',-40]);
     const age=pv.ageMs?Date.now()-pv.ageMs:null;
     if(age!=null&&age<864e5)d.push([`Brand new: ${ago(pv.ageMs)} old`,-20]);else if(age!=null&&age<6048e5)d.push([`Young token: ${ago(pv.ageMs)} old`,-10]);
@@ -716,7 +746,7 @@ function renderSecurity(chain,s,err){
   const row=(label,state,val)=>`<li><span>${ICON[state]}</span><span>${esc(label)}</span><span class="r" style="color:${color(state)}">${esc(val)}</span></li>`;
   const b=(v,good,yes,no)=>v==null?['na','N/A']:v===good?['pass',good?yes:no]:['fail',good?no:yes];
   const taxState=t=>t==null?['na','N/A']:t>15?['fail',t.toFixed(2)+'%']:t>5?['warn',t.toFixed(2)+'%']:['pass',t.toFixed(2)+'%'];
-  const off=!!current?.pv?.official;const issuer=r=>off&&r[0]==='fail'?['na','Issuer control']:r;
+  const off=!!(current?.pv?.official||current?.pv?.stable);const issuer=r=>off&&r[0]==='fail'?['na','Issuer control']:r;
   const hp=s.honeypot===true&&(s.factory||off)?['warn','Disputed']:b(s.honeypot,false,'Detected','Clear');
   const lpState=s.lpSecured==null?['na','N/A']:s.lpSecured>=90?['pass',s.lpSecured.toFixed(0)+'% secured']:s.lpTop&&s.lpTop.pct>50?['fail',s.lpTop.pct.toFixed(0)+'% one wallet']:['warn',s.lpSecured.toFixed(0)+'% secured'];
   const rows=[
@@ -861,6 +891,9 @@ const miniLogo=(u,sym,ca)=>{const s=safeImg(u);const m=mono(sym,ca);return s?`<i
 /* ---------- provenance: official stock tokens, token age, deployer history (Blockscout) ---------- */
 const BS='https://robinhoodchain.blockscout.com/api/v2';
 const STOCK_FACTORY='0x4783c67b63de2b358ac5951a7d41f47a38f3c046';
+/* official stablecoins on Robinhood Chain, matched by exact contract address only: scam tokens copy tickers and names */
+const STABLES={'0x5fc5360d0400a0fd4f2af552add042d716f1d168':{sym:'USDG',issuer:'Paxos · Global Dollar Network'}};
+const STABLE_SYMS=new Set('USDG USDC USDT PYUSD USDP DAI USDS USD1 RLUSD FDUSD TUSD USDE'.split(' '));
 const STOCK_SYMS=new Set('TSLA NVDA AAPL MSFT AMZN GOOGL GOOG META COIN SPCX SPY QQQ PLTR AVGO MU INTC SKHY APP AVAV AXON AXTI NFLX LLY DELL HOOD AMD CRCL MSTR USAR CBRS CCL CELH CLSK ELF LITE NNE PENG ORCL IBM JPM V MA WMT DIS BA UBER SHOP SNOW ARM TSM ASML SMCI'.split(' '));
 async function provenance(ca){
   const o={};let jobsIcon=Promise.resolve();
@@ -868,9 +901,11 @@ async function provenance(ca){
   o.creator=a.creator_address_hash||'';o.tokenScam=!!a.is_scam;
   jobsIcon=getJSON(`${BS}/tokens/${ca}`,'Blockscout').then(t=>{o.icon=safeImg(t.icon_url);o.bsHolders=num(t.holders_count)}).catch(()=>{});
   o.official=o.creator.toLowerCase()===STOCK_FACTORY;
+  o.stable=STABLES[String(ca).toLowerCase()]||null;
+  {const tk=a.token||{};o.stableImpersonation=!o.stable&&(STABLE_SYMS.has(String(tk.symbol||'').trim().toUpperCase())||/global dollar|tether|usd coin/i.test(tk.name||''));}
   const jobs=[];
   if(a.creation_transaction_hash)jobs.push(getJSON(`${BS}/transactions/${a.creation_transaction_hash}`,'Blockscout').then(t=>{o.createdAt=Date.parse(t.timestamp)||null}).catch(()=>{}));
-  if(o.creator&&!o.official){
+  if(o.creator&&!o.official&&!o.stable){
     jobs.push(getJSON(`${BS}/addresses/${o.creator}`,'Blockscout').then(c=>{o.creatorScam=!!c.is_scam;o.creatorContract=!!c.is_contract;o.creatorName=c.name||''}).catch(()=>{}));
     jobs.push(getJSON(`${BS}/addresses/${o.creator}/counters`,'Blockscout').then(c=>{o.creatorTx=num(c.transactions_count)}).catch(()=>{}));
     jobs.push(getJSON(`${BS}/addresses/${o.creator}/transactions`,'Blockscout').then(t=>{const it=t.items||[];
@@ -886,6 +921,7 @@ function renderOrigin(p,pv,err){
   if(!pv){box.innerHTML=`<span>Explorer data</span><span style="color:var(--amber)">${esc(err||'unavailable')}</span>`;$('offBadge').innerHTML='';return}
   const rows=[['Token age',pv.ageMs?ago(pv.ageMs)+(pv.ageSrc?' ('+pv.ageSrc+')':''):'—']];
   if(pv.official)rows.push(['Issuer','Robinhood StockFactory']);
+  else if(pv.stable)rows.push(['Issuer',pv.stable.issuer]);
   else{
     rows.push(['Deployer',`<a href="${EXPLORER}/address/${esc(pv.creator)}" target="_blank" rel="noopener">${esc(short(pv.creator))}</a>${pv.creatorContract?' <span style="color:var(--dim)">contract'+(pv.creatorName?' · '+esc(pv.creatorName):'')+'</span>':''}`,true]);
     if(!pv.creatorContract){
@@ -898,7 +934,7 @@ function renderOrigin(p,pv,err){
     if(pv.creatorScam||pv.tokenScam)rows.push(['Explorer flag','<span style="color:var(--crimson)">Marked as scam</span>',true]);
   }
   box.innerHTML=rows.map(([k,v,html])=>`<span>${esc(k)}</span><span>${html?v:esc(v)}</span>`).join('');
-  $('offBadge').innerHTML=pv.official?'<div class="badge b-safe" style="margin-bottom:12px">✓ OFFICIAL ROBINHOOD STOCK TOKEN</div>':pv.impersonation?'<div class="badge b-crit" style="margin-bottom:12px">⚠ NOT THE OFFICIAL STOCK TOKEN</div>':'';
+  $('offBadge').innerHTML=pv.stable?'<div class="badge b-safe" style="margin-bottom:12px">✓ OFFICIAL STABLECOIN · '+esc(pv.stable.sym)+'</div>':pv.stableImpersonation?'<div class="badge b-crit" style="margin-bottom:12px">⚠ FAKE STABLECOIN · NOT THE OFFICIAL CONTRACT</div>':pv.official?'<div class="badge b-safe" style="margin-bottom:12px">✓ OFFICIAL ROBINHOOD STOCK TOKEN</div>':pv.impersonation?'<div class="badge b-crit" style="margin-bottom:12px">⚠ NOT THE OFFICIAL STOCK TOKEN</div>':'';
 }
 
 /* ---------- share links ---------- */
