@@ -142,6 +142,10 @@ h2{font-size:clamp(24px,3vw,34px);line-height:1.1;letter-spacing:-.02em;color:va
 .log div{white-space:pre-wrap;overflow-wrap:anywhere}
 .log .t{color:var(--dim)}.log .ok{color:var(--sage)}.log .warn{color:var(--amber)}.log .bad{color:var(--crimson)}.log .inf{color:var(--steel)}
 .skel{color:var(--dim)}
+.minel{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto}
+.minel li{border-top:1px solid var(--line)}.minel li:first-child{border-top:0}
+.mine{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 40px 56px;gap:8px;align-items:center;background:none;border:0;padding:10px 4px;text-align:left;font:13px var(--mono);color:var(--ink);min-height:44px}
+.mine:hover{background:var(--carbon2)}.mine span:nth-child(n+2){text-align:right}
 
 /* agent desk */
 .desk{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
@@ -253,7 +257,15 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <div class="wrap">
       <div class="sh">
         <div><h2>Forensic Verdict</h2><p class="sub">Every deduction is derived from a live API flag. Nothing is cached or simulated.</p></div>
-        <span class="mono" style="font-size:12px;color:var(--dim)" id="scanTime">—</span>
+        <div style="display:grid;gap:8px;justify-items:end">
+          <span class="mono" style="font-size:12px;color:var(--dim)" id="scanTime">—</span>
+          <div id="shareBar" style="display:flex;gap:6px;flex-wrap:wrap;visibility:hidden">
+            <button class="toggle" id="watchBtn" aria-pressed="false">☆ Watch</button>
+            <button class="toggle" id="copyLink">Copy link</button>
+            <a class="toggle" id="shareX" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Share on X</a>
+            <a class="toggle" id="shareTg" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center">Telegram</a>
+          </div>
+        </div>
       </div>
       <div class="dash">
         <div class="col">
@@ -262,6 +274,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
               <div class="tokicon" id="tokIcon">—</div>
               <div><div class="tokname" id="tokName">Awaiting scan</div><div class="tokmeta" id="tokMeta">—</div></div>
             </div>
+            <div id="offBadge"></div>
             <div class="gauge">
               <svg viewBox="0 0 120 120" aria-hidden="true">
                 <circle cx="60" cy="60" r="52" fill="none" stroke="#1E2229" stroke-width="6"/>
@@ -308,7 +321,16 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
             <p class="fine" id="topNote">Excludes DEX pools and burn addresses.</p>
             <div id="lpBox"></div>
           </div>
+          <div class="card">
+            <div class="ct"><span>Origin &amp; deployer</span><span class="mono">Blockscout</span></div>
+            <div class="kv" id="originKv"><span>Awaiting scan</span><span></span></div>
+          </div>
         </div>
+      </div>
+
+      <div class="two" style="margin-top:14px">
+        <div class="card"><div class="ct"><span>Watchlist</span><span class="fine" id="mineWho" style="margin:0"></span></div><ul class="minel" id="watchList"></ul></div>
+        <div class="card"><div class="ct"><span>Recent scans</span><button class="toggle" id="clearHist">Clear</button></div><ul class="minel" id="histList"></ul></div>
       </div>
 
       <div class="card" style="margin-top:14px">
@@ -366,6 +388,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="card" id="changelog">
         <h2 style="font-size:24px;margin-bottom:18px">Engineering Changelog</h2>
         <ul class="cl">
+          <li><div class="ver">v0.7.0<small>Nov 2026</small></div><div><b>Shareable scans, provenance, watchlist</b><p>Every scan gets its own link. Official Stock Tokens are verified on-chain against Robinhood's StockFactory, and look-alikes are flagged. Token age and deployer history come from Blockscout. Watchlist and recent scans are saved per wallet on this device.</p></div></li>
           <li><div class="ver">v0.6.0<small>Nov 2026</small></div><div><b>Soft-rug and owner-power detection</b><p>Scores LP ownership and locks, 13 owner and trading-control flags, and deployer honeypot history. Top-10 now excludes pools and burn addresses. UERC20 factory false positives are handled.</p></div></li>
           <li><div class="ver">v0.5.0<small>Nov 2026</small></div><div><b>Robinhood Chain only</b><p>OMEN now scans Robinhood Chain (ID 4663) exclusively. Solana and other EVM chains were removed. Ticker search warns when several tokens share a symbol, since copycat tokens with inflated liquidity are common.</p></div></li>
           <li><div class="ver">v0.4.0<small>Nov 2026</small></div><div><b>Paper-mode simulator and order-flow radar</b><p>Modules 03 and 04 now read live pair data: price-impact estimate from pool depth, and buy/sell imbalance across 5m, 1h, 6h and 24h.</p></div></li>
@@ -377,7 +400,9 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="card" id="faq">
         <h2 style="font-size:24px;margin-bottom:18px">Technical FAQ</h2>
         <details open><summary>Where does the data come from?</summary><p>Market data from <code>api.dexscreener.com</code> and security flags from <code>api.gopluslabs.io</code>, both called directly from your browser. There is no OMEN backend in between and no demo data.</p></details>
-        <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Contract: not open source −25, mintable −20, proxy −15, tax &gt;5% −15 or &gt;15% −35. Owner powers: cannot sell all −40, owner can change balances −35, creator made honeypots before −30, hidden owner / reclaimable ownership / self-destruct −25 each, buying restricted or tax changeable −20, pausable transfers / blacklist / per-wallet tax −15, cooldown −10, external calls −5. Soft-rug: one wallet controls &gt;50% of unlocked LP −25, otherwise &lt;90% of LP locked or burned −10. Market: liquidity &lt;$50k −20 or &lt;$10k −35, top-10 wallets &gt;50% −20. ≥75 Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
+        <details><summary>How is the score calculated?</summary><p>Start at 100. Honeypot → 0. Contract: not open source −25, mintable −20, proxy −15, tax &gt;5% −15 or &gt;15% −35. Owner powers: cannot sell all −40, owner can change balances −35, creator made honeypots before −30, hidden owner / reclaimable ownership / self-destruct −25 each, buying restricted or tax changeable −20, pausable transfers / blacklist / per-wallet tax −15, cooldown −10, external calls −5. Soft-rug: one wallet controls &gt;50% of unlocked LP −25, otherwise &lt;90% of LP locked or burned −10. Origin: impersonates an official Stock Token −40, flagged as scam on the explorer −40, token younger than 24h −20 or 7 days −10, deployer launched 10+ contracts −20 or 5+ −10, deployer holds &gt;25% −20 or &gt;10% −10. Market: liquidity &lt;$50k −20 or &lt;$10k −35, top-10 wallets &gt;50% −20. Official Robinhood Stock Tokens are scored on DEX liquidity only, because pausing, upgrades and compliance blacklists are expected for a regulated issuer. ≥75 Safe to Allocate, 45–74 Caution, &lt;45 Critical.</p></details>
+        <details><summary>How does OMEN know a Stock Token is official?</summary><p>Every official Robinhood Stock Token is deployed by one contract, the StockFactory at <code>0x4783…C046</code>. OMEN asks the Robinhood Chain explorer who created the token. If it is the StockFactory, the token gets the Official badge. If the ticker or name copies a stock but the creator is anyone else, it is flagged as a look-alike.</p></details>
+        <details><summary>Can I share a scan?</summary><p>Yes. The address bar updates to <code>#0x…</code> after every scan, so the link opens the same token for anyone. Use Copy link, Share on X or Telegram above the dashboard.</p></details>
         <details><summary>What is a soft-rug and how does OMEN catch it?</summary><p>A token with clean code whose liquidity sits in one wallet. When buyers pile in, that wallet pulls the pool and holders are left with nothing to sell into. OMEN reads who owns the LP positions and how much is locked or burned, and deducts when a single unlocked owner controls most of it.</p></details>
         <details><summary>Which pair is used when a token trades in many pools?</summary><p>The pair with the highest <code>liquidity.usd</code>. Thin pools are easy to manipulate, so the deepest pool is the most honest price.</p></details>
         <details><summary>Which chain does OMEN support?</summary><p>Only Robinhood Chain, the Ethereum L2 by Robinhood (chain ID <code>4663</code>, ETH for gas). Tokens on other chains are rejected. Verify any address on <a href="https://robinhoodchain.blockscout.com" target="_blank" rel="noopener">robinhoodchain.blockscout.com</a>.</p></details>
@@ -467,7 +492,7 @@ const QUICK=[
   {sym:'CASHCAT',chain:'HOOD',ca:'0x020bfC650A365f8BB26819deAAbF3E21291018b4'},
   {sym:'PIPEDOG',chain:'HOOD',ca:'0x5Cb6F181081301b44905F3ae15419112ecaBd8A6'},
   {sym:'FOX',chain:'HOOD',ca:'0x2103faA9D1762e27a716C61718b3aCf3Ec1F9bf1'}];
-let current=null,chartOn=true,busy=false;
+let current=null,chartOn=true,busy=false,lastPairs=[];
 
 /* formatting */
 const usd=n=>{if(n==null||isNaN(n))return '—';const a=Math.abs(n);
@@ -503,12 +528,12 @@ async function scan(q){
     let pair=null,warn='';
     if(isAddr(q)){
       log('DexScreener: GET /latest/dex/tokens/'+short(q));
-      const d=await getJSON('https://api.dexscreener.com/latest/dex/tokens/'+encodeURIComponent(q),'DexScreener');
+      const d=await getJSON('https://api.dexscreener.com/latest/dex/tokens/'+encodeURIComponent(q),'DexScreener');lastPairs=d.pairs||[];
       pair=bestPair((d.pairs||[]).filter(x=>x.baseToken?.address?.toLowerCase()===q.toLowerCase()))||bestPair(d.pairs);
       if(!pair)throw new Error((d.pairs||[]).length?'This token has no pool on Robinhood Chain. OMEN scans Robinhood Chain only.':'No Robinhood Chain pool found for this address.');
     }else{
       log('DexScreener: ticker search q='+q+' (Robinhood Chain only)');
-      const d=await getJSON('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q),'DexScreener');
+      const d=await getJSON('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q),'DexScreener');lastPairs=d.pairs||[];
       pair=bestPair(d.pairs);
       if(!pair)throw new Error('No Robinhood Chain token found for "'+q+'".');
       const sym=pair.baseToken.symbol.trim().toLowerCase();
@@ -520,10 +545,17 @@ async function scan(q){
     renderMarket(pair);
     status('Querying GoPlus Security…');
     let sec=null,secErr=null;
+    let pv=null,pvErr=null;
+    const pvJob=provenance(ca).then(x=>{pv=x;log(pv.official?'Blockscout: deployed by Robinhood StockFactory (official Stock Token)':'Blockscout: deployer '+short(pv.creator)+(pv.deployed!=null?`, ${pv.deployed}${pv.deployedPartial?'+':''} contracts deployed`:''),pv.official?'ok':'')}).catch(e=>{pvErr=e.message;log('Blockscout: '+e.message,'warn')});
     try{sec=await goplus(chain,ca,pair)}catch(e){secErr=e.message;log('GoPlus: '+e.message,'bad')}
-    const res=scoreToken(pair,sec);
-    current={pair,sec,res,chain,ca};
-    renderSecurity(chain,sec,secErr);renderScore(res);renderDesk();
+    await pvJob;
+    if(pv){const firstPair=Math.min(...(lastPairs||[]).filter(x=>x.chainId==='robinhood'&&x.baseToken?.address?.toLowerCase()===ca.toLowerCase()&&x.pairCreatedAt).map(x=>x.pairCreatedAt),Infinity);
+      pv.ageMs=pv.createdAt||(isFinite(firstPair)?firstPair:null);pv.ageSrc=pv.createdAt?'contract':isFinite(firstPair)?'first pool':'';
+      pv.impersonation=!pv.official&&(STOCK_SYMS.has(pair.baseToken.symbol.trim().toUpperCase())||/robinhood token/i.test(pair.baseToken.name||''));
+      if(pv.impersonation)log('Warning: name/ticker matches an official Stock Token but it was not deployed by Robinhood StockFactory','bad')}
+    const res=scoreToken(pair,sec,pv);
+    current={pair,sec,res,chain,ca,pv};
+    renderSecurity(chain,sec,secErr);renderScore(res);renderDesk();renderOrigin(pair,pv,pvErr);setShare(pair,res);remember();
     $('scanTime').textContent='Scanned '+now()+' · '+(CHAIN_NAME[chain]||chain);
     log(`Verdict: ${res.verdict} (${res.score}/100)`,res.cls==='b-safe'?'ok':res.cls==='b-caut'?'warn':'bad');
     status(warn?'⚠ '+warn:secErr?'Market data loaded. Security data unavailable: '+secErr:'Scan complete.',!!(warn||secErr));
@@ -584,12 +616,28 @@ function normalize(t,pair){
   return {honeypot:flag(t.is_honeypot),open:flag(t.is_open_source),proxy:flag(t.is_proxy),mint:flag(t.is_mintable),
     buyTax:num(t.buy_tax)!=null?num(t.buy_tax)*100:null,sellTax:num(t.sell_tax)!=null?num(t.sell_tax)*100:null,
     holderCount:num(t.holder_count),holders:wallets,top10:wallets.length?top10:null,burned,inPools,
-    lp,lpSecured,lpTop,owner,factory,creator:t.creator_address||'',name:t.token_name};
+    lp,lpSecured,lpTop,owner,factory,creator:t.creator_address||'',creatorPct:num(t.creator_percent)!=null?num(t.creator_percent)*100:null,name:t.token_name};
 }
 
-function scoreToken(pair,s){
+function scoreToken(pair,s,pv){
   const d=[];let score=100;const liq=pair.liquidity?.usd||0;const sells=pair.txns?.h24?.sells||0;
+  const official=!!pv?.official;
+  if(official){
+    /* regulated issuer: pausable, upgradeable, compliance blacklist are expected, not rug signals */
+    d.push(['Official Robinhood Stock Token: issuer controls exempt','✓']);
+    if(liq<1e4)d.push([`DEX liquidity ${usd(liq)} < $10K`,-35]);else if(liq<5e4)d.push([`DEX liquidity ${usd(liq)} < $50K`,-20]);
+    d.forEach(x=>{if(typeof x[1]==='number')score+=x[1]});score=Math.max(0,Math.min(100,score));
+    return {score,verdict:score>=75?'OFFICIAL — SAFE TO ALLOCATE':score>=45?'OFFICIAL — THIN DEX LIQUIDITY':'OFFICIAL — ILLIQUID ON DEX',cls:score>=75?'b-safe':score>=45?'b-caut':'b-crit',d};
+  }
+  if(pv){
+    if(pv.impersonation)d.push(['Impersonates an official Stock Token',-40]);
+    if(pv.tokenScam||pv.creatorScam)d.push(['Flagged as scam on explorer',-40]);
+    const age=pv.ageMs?Date.now()-pv.ageMs:null;
+    if(age!=null&&age<864e5)d.push([`Brand new: ${ago(pv.ageMs)} old`,-20]);else if(age!=null&&age<6048e5)d.push([`Young token: ${ago(pv.ageMs)} old`,-10]);
+    if(!pv.creatorContract&&pv.deployed!=null){if(pv.deployed>=10)d.push([`Serial deployer: ${pv.deployed}${pv.deployedPartial?'+':''} contracts`,-20]);else if(pv.deployed>=5)d.push([`Deployer launched ${pv.deployed}${pv.deployedPartial?'+':''} contracts`,-10])}
+  }
   if(s){
+    if(s.creatorPct!=null){if(s.creatorPct>25)d.push([`Deployer holds ${s.creatorPct.toFixed(1)}%`,-20]);else if(s.creatorPct>10)d.push([`Deployer holds ${s.creatorPct.toFixed(1)}%`,-10])}
     /* honeypot: hard zero, unless it is the documented UERC20 factory false positive */
     if(s.honeypot===true){
       if(!s.factory)return {score:0,verdict:'DO NOT BUY — HONEYPOT',cls:'b-crit',d:[['Honeypot detected','→ 0']],notes:[]};
@@ -661,18 +709,19 @@ function renderSecurity(chain,s,err){
   const row=(label,state,val)=>`<li><span>${ICON[state]}</span><span>${esc(label)}</span><span class="r" style="color:${color(state)}">${esc(val)}</span></li>`;
   const b=(v,good,yes,no)=>v==null?['na','N/A']:v===good?['pass',good?yes:no]:['fail',good?no:yes];
   const taxState=t=>t==null?['na','N/A']:t>15?['fail',t.toFixed(2)+'%']:t>5?['warn',t.toFixed(2)+'%']:['pass',t.toFixed(2)+'%'];
-  const hp=s.honeypot===true&&s.factory?['warn','Disputed']:b(s.honeypot,false,'Detected','Clear');
+  const off=!!current?.pv?.official;const issuer=r=>off&&r[0]==='fail'?['na','Issuer control']:r;
+  const hp=s.honeypot===true&&(s.factory||off)?['warn','Disputed']:b(s.honeypot,false,'Detected','Clear');
   const lpState=s.lpSecured==null?['na','N/A']:s.lpSecured>=90?['pass',s.lpSecured.toFixed(0)+'% secured']:s.lpTop&&s.lpTop.pct>50?['fail',s.lpTop.pct.toFixed(0)+'% one wallet']:['warn',s.lpSecured.toFixed(0)+'% secured'];
   const rows=[
     ['Honeypot simulation',...hp],
     ['Liquidity locked / burned',...lpState],
     ['Source code verified',...b(s.open,true,'Verified','Unverified')],
-    ['Proxy / upgradeable',...b(s.proxy,false,'Proxy','None')],
-    ['Mint function',...b(s.mint,false,'Active','Renounced')],
+    ['Proxy / upgradeable',...issuer(b(s.proxy,false,'Proxy','None'))],
+    ['Mint function',...issuer(b(s.mint,false,'Active','Renounced'))],
     ['Buy tax',...taxState(s.buyTax)],['Sell tax',...taxState(s.sellTax)]];
   let passed=0,unknown=0;
   OWNER_FLAGS.forEach(([k,label,,sev])=>{const v=s.owner[k];
-    if(v===true){rows.push([label,...(s.factory&&UERC20_FP.has(k)?['warn','Disputed']:[sev,'Yes'])])}else if(v===false)passed++;else unknown++});
+    if(v===true){rows.push([label,...(off?['na','Issuer control']:s.factory&&UERC20_FP.has(k)?['warn','Disputed']:[sev,'Yes'])])}else if(v===false)passed++;else unknown++});
   rows.push(['Owner & trading controls',...(passed?['pass',`${passed} clear${unknown?` · ${unknown} N/A`:''}`]:['na','N/A'])]);
   $('checks').innerHTML=rows.map(r=>row(r[0],r[1],r[2])).join('')+(s.hpNote?`<li><span>${ICON.warn}</span><span style="grid-column:2/4;font-size:12px;color:var(--amber)">${esc(s.hpNote)}</span></li>`:'');
   rows.forEach(r=>{if(r[1]==='fail')log(`Flag: ${r[0]} → ${r[2]}`,'bad');else if(r[1]==='warn')log(`Flag: ${r[0]} → ${r[2]}`,'warn')});
@@ -776,7 +825,7 @@ document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if
 
 /* ---------- sign in (non-custodial, address only) ---------- */
 $('openSignin').onclick=()=>openM('signModal');$('closeSign').onclick=()=>closeM('signModal');
-const signed=(addr)=>{$('openSignin').textContent=short(addr);$('signStatus').textContent='Connected: '+addr;$('signStatus').className='status';log('Sign In: wallet connected '+short(addr),'ok');setTimeout(()=>closeM('signModal'),900)};
+const signed=(addr)=>{const g=store.get('guest');wallet=addr;const w=store.get();const merge=(A,B)=>[...A,...B.filter(x=>!A.some(y=>y.ca.toLowerCase()===x.ca.toLowerCase()))];store.set({watch:merge(w.watch,g.watch),hist:merge(w.hist,g.hist).slice(0,20)});renderMine();$('openSignin').textContent=short(addr);$('signStatus').textContent='Connected: '+addr;$('signStatus').className='status';log('Sign In: wallet connected '+short(addr),'ok');setTimeout(()=>closeM('signModal'),900)};
 $('wEvm').onclick=async()=>{const eth=window.ethereum;
   if(!eth){$('signStatus').textContent='No EVM wallet detected in this browser.';$('signStatus').className='status err';return}
   try{const [a]=await eth.request({method:'eth_requestAccounts'});
@@ -784,12 +833,89 @@ $('wEvm').onclick=async()=>{const eth=window.ethereum;
     catch(e){if(e&&e.code===4902)await eth.request({method:'wallet_addEthereumChain',params:[{chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']}]})}
     signed(a)}catch(e){$('signStatus').textContent=e.message||'Request rejected';$('signStatus').className='status err'}};
 
+/* ---------- provenance: official stock tokens, token age, deployer history (Blockscout) ---------- */
+const BS='https://robinhoodchain.blockscout.com/api/v2';
+const STOCK_FACTORY='0x4783c67b63de2b358ac5951a7d41f47a38f3c046';
+const STOCK_SYMS=new Set('TSLA NVDA AAPL MSFT AMZN GOOGL GOOG META COIN SPCX SPY QQQ PLTR AVGO MU INTC SKHY APP AVAV AXON AXTI NFLX LLY DELL HOOD AMD CRCL MSTR USAR CBRS CCL CELH CLSK ELF LITE NNE PENG ORCL IBM JPM V MA WMT DIS BA UBER SHOP SNOW ARM TSM ASML SMCI'.split(' '));
+async function provenance(ca){
+  const o={};
+  const a=await getJSON(`${BS}/addresses/${ca}`,'Blockscout');
+  o.creator=a.creator_address_hash||'';o.tokenScam=!!a.is_scam;
+  o.official=o.creator.toLowerCase()===STOCK_FACTORY;
+  const jobs=[];
+  if(a.creation_transaction_hash)jobs.push(getJSON(`${BS}/transactions/${a.creation_transaction_hash}`,'Blockscout').then(t=>{o.createdAt=Date.parse(t.timestamp)||null}).catch(()=>{}));
+  if(o.creator&&!o.official){
+    jobs.push(getJSON(`${BS}/addresses/${o.creator}`,'Blockscout').then(c=>{o.creatorScam=!!c.is_scam;o.creatorContract=!!c.is_contract;o.creatorName=c.name||''}).catch(()=>{}));
+    jobs.push(getJSON(`${BS}/addresses/${o.creator}/counters`,'Blockscout').then(c=>{o.creatorTx=num(c.transactions_count)}).catch(()=>{}));
+    jobs.push(getJSON(`${BS}/addresses/${o.creator}/transactions`,'Blockscout').then(t=>{const it=t.items||[];
+      o.deployed=it.filter(x=>x.created_contract).length;o.deployedPartial=!!t.next_page_params;
+      const ts=it.map(x=>Date.parse(x.timestamp)).filter(Boolean);o.firstSeen=ts.length&&!t.next_page_params?Math.min(...ts):null}).catch(()=>{}));
+  }
+  await Promise.all(jobs);
+  return o;
+}
+const ago=ms=>{if(!ms)return '—';const s=(Date.now()-ms)/1000;if(s<3600)return Math.max(1,Math.round(s/60))+' min';if(s<86400)return Math.round(s/3600)+' h';return Math.round(s/86400)+' d'};
+function renderOrigin(p,pv,err){
+  const box=$('originKv');
+  if(!pv){box.innerHTML=`<span>Explorer data</span><span style="color:var(--amber)">${esc(err||'unavailable')}</span>`;$('offBadge').innerHTML='';return}
+  const rows=[['Token age',pv.ageMs?ago(pv.ageMs)+(pv.ageSrc?' ('+pv.ageSrc+')':''):'—']];
+  if(pv.official)rows.push(['Issuer','Robinhood StockFactory']);
+  else{
+    rows.push(['Deployer',`<a href="${EXPLORER}/address/${esc(pv.creator)}" target="_blank" rel="noopener">${esc(short(pv.creator))}</a>${pv.creatorContract?' <span style="color:var(--dim)">contract'+(pv.creatorName?' · '+esc(pv.creatorName):'')+'</span>':''}`,true]);
+    if(!pv.creatorContract){
+      rows.push(['Deployer transactions',pv.creatorTx!=null?pv.creatorTx.toLocaleString():'—']);
+      rows.push(['Contracts deployed',pv.deployed!=null?pv.deployed+(pv.deployedPartial?'+ (recent)':''):'—']);
+      rows.push(['Deployer first seen',pv.firstSeen?ago(pv.firstSeen)+' ago':pv.deployedPartial?'older than recent history':'—']);
+    }
+    if(current?.sec?.creatorPct!=null)rows.push(['Deployer holds',current.sec.creatorPct.toFixed(2)+'%']);
+    if(current?.sec?.owner?.honeypot_with_same_creator!=null)rows.push(['Past honeypots by deployer',current.sec.owner.honeypot_with_same_creator?'<span style="color:var(--crimson)">Yes</span>':'None found',true]);
+    if(pv.creatorScam||pv.tokenScam)rows.push(['Explorer flag','<span style="color:var(--crimson)">Marked as scam</span>',true]);
+  }
+  box.innerHTML=rows.map(([k,v,html])=>`<span>${esc(k)}</span><span>${html?v:esc(v)}</span>`).join('');
+  $('offBadge').innerHTML=pv.official?'<div class="badge b-safe" style="margin-bottom:12px">✓ OFFICIAL ROBINHOOD STOCK TOKEN</div>':pv.impersonation?'<div class="badge b-crit" style="margin-bottom:12px">⚠ NOT THE OFFICIAL STOCK TOKEN</div>':'';
+}
+
+/* ---------- share links ---------- */
+function setShare(p,res){
+  const url=`${location.origin}${location.pathname}#${p.baseToken.address}`;
+  try{history.replaceState(null,'','#'+p.baseToken.address)}catch(e){}
+  const text=`$${p.baseToken.symbol} on Robinhood Chain: OMEN score ${res.score}/100 · ${res.verdict}`;
+  $('shareX').href='https://x.com/intent/post?text='+encodeURIComponent(text)+'&url='+encodeURIComponent(url);
+  $('shareTg').href='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(text);
+  $('shareBar').style.visibility='visible';$('shareBar').dataset.url=url;
+}
+$('copyLink').onclick=async()=>{const u=$('shareBar').dataset.url;try{await navigator.clipboard.writeText(u);$('copyLink').textContent='Copied ✓'}catch(e){$('copyLink').textContent='Copy failed'}setTimeout(()=>{$('copyLink').textContent='Copy link'},1500)};
+addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(isAddr(h)&&(!current||current.ca.toLowerCase()!==h.toLowerCase()))scan(h)});
+
+/* ---------- watchlist & history (this device; per wallet when signed in) ---------- */
+let wallet='';
+const store={key:w=>'omen:v1:'+((w??wallet)||'guest').toLowerCase(),
+  get(w){try{const v=JSON.parse(localStorage.getItem(this.key(w)));return v&&v.watch?v:{watch:[],hist:[]}}catch(e){return {watch:[],hist:[]}}},
+  set(v){try{localStorage.setItem(this.key(),JSON.stringify(v))}catch(e){}}};
+const entry=c=>({ca:c.ca,sym:c.pair.baseToken.symbol,score:c.res.score,cls:c.res.cls,t:Date.now()});
+function remember(){if(!current)return;const s=store.get();const e=entry(current);
+  s.hist=[e,...s.hist.filter(x=>x.ca.toLowerCase()!==e.ca.toLowerCase())].slice(0,20);
+  s.watch=s.watch.map(x=>x.ca.toLowerCase()===e.ca.toLowerCase()?{...e}:x);store.set(s);renderMine()}
+function toggleWatch(){if(!current)return;const s=store.get();const i=s.watch.findIndex(x=>x.ca.toLowerCase()===current.ca.toLowerCase());
+  if(i>=0)s.watch.splice(i,1);else s.watch.unshift(entry(current));store.set(s);renderMine();log(i>=0?'Watchlist: removed $'+current.pair.baseToken.symbol:'Watchlist: added $'+current.pair.baseToken.symbol,'inf')}
+$('watchBtn').onclick=toggleWatch;
+function renderMine(){const s=store.get();
+  const dot=c=>c==='b-safe'?'var(--sage)':c==='b-caut'?'var(--amber)':'var(--crimson)';
+  const li=x=>`<li><button class="mine" data-ca="${esc(x.ca)}"><span><b>$${esc(x.sym)}</b> <span style="color:var(--dim)">${esc(short(x.ca))}</span></span><span class="num" style="color:${dot(x.cls)}">${esc(x.score)}</span><span style="color:var(--dim)">${esc(ago(x.t))}</span></button></li>`;
+  $('watchList').innerHTML=s.watch.length?s.watch.map(li).join(''):'<li class="fine">Nothing yet. Press ☆ Watch on any scan.</li>';
+  $('histList').innerHTML=s.hist.length?s.hist.map(li).join(''):'<li class="fine">Your scans will appear here.</li>';
+  $('mineWho').textContent=wallet?'Saved on this device for '+short(wallet):'Saved on this device · Sign In to keep a list per wallet';
+  const on=current&&s.watch.some(x=>x.ca.toLowerCase()===current.ca.toLowerCase());$('watchBtn').textContent=on?'★ Watching':'☆ Watch';$('watchBtn').setAttribute('aria-pressed',!!on)}
+document.addEventListener('click',e=>{const b=e.target.closest('.mine');if(b){$('caInput').value=b.dataset.ca;scan(b.dataset.ca);go('#dashboard')}});
+$('clearHist').onclick=()=>{const s=store.get();s.hist=[];store.set(s);renderMine()};
+
 /* ---------- wiring ---------- */
 $('scanForm').addEventListener('submit',e=>{e.preventDefault();scan($('caInput').value)});
 document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{$('caInput').value=b.dataset.ca;scan(b.dataset.ca)});
 log('OMEN Agent online. Sources: DexScreener, GoPlus Security.','inf');
-$('caInput').value=QUICK[0].ca;
-scan(QUICK[0].ca).then(ticker);
+const first=isAddr(location.hash.slice(1))?location.hash.slice(1):QUICK[0].ca;
+$('caInput').value=first;renderMine();
+scan(first).then(ticker);
 setInterval(ticker,60000);
 }
 </script>
