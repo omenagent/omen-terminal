@@ -98,7 +98,7 @@ h2{font-size:clamp(24px,3vw,34px);line-height:1.1;letter-spacing:-.02em;color:va
 @media (max-width:680px){.dash{grid-template-columns:minmax(0,1fr)}}
 .col{display:grid;gap:14px;align-content:start}
 .tokhead{display:flex;gap:12px;align-items:center;margin-bottom:16px}
-.tokicon{width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);display:grid;place-items:center;font:600 13px var(--mono);color:var(--silver);background:var(--carbon2);flex:none}
+.tokicon{width:52px;height:52px;overflow:hidden;border-radius:50%;border:1px solid var(--line2);display:grid;place-items:center;font:600 13px var(--mono);color:var(--silver);background:var(--carbon2);flex:none}
 .tokname{font-weight:600;color:var(--ivory);font-size:17px;line-height:1.2}
 .tokmeta{font:12px var(--mono);color:var(--mute);overflow-wrap:anywhere}
 .gauge{position:relative;width:100%;max-width:220px;margin:6px auto 10px;aspect-ratio:1}
@@ -142,6 +142,11 @@ h2{font-size:clamp(24px,3vw,34px);line-height:1.1;letter-spacing:-.02em;color:va
 .log div{white-space:pre-wrap;overflow-wrap:anywhere}
 .log .t{color:var(--dim)}.log .ok{color:var(--sage)}.log .warn{color:var(--amber)}.log .bad{color:var(--crimson)}.log .inf{color:var(--steel)}
 .skel{color:var(--dim)}
+.tokicon img{width:100%;height:100%;object-fit:cover;display:block}
+.mini{width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:-4px;margin-right:6px;display:inline-block;flex:none}
+.mono-m{display:inline-grid;place-items:center;font:600 8px var(--mono);color:var(--silver);background:var(--carbon2);vertical-align:-4px}
+.chip .mini{width:16px;height:16px;margin-right:6px}
+.nologo{font:11px var(--mono);color:var(--amber);margin-top:2px}
 .minel{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto}
 .minel li{border-top:1px solid var(--line)}.minel li:first-child{border-top:0}
 .mine{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 40px 56px;gap:8px;align-items:center;background:none;border:0;padding:10px 4px;text-align:left;font:13px var(--mono);color:var(--ink);min-height:44px}
@@ -272,7 +277,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
           <div class="card">
             <div class="tokhead">
               <div class="tokicon" id="tokIcon">—</div>
-              <div><div class="tokname" id="tokName">Awaiting scan</div><div class="tokmeta" id="tokMeta">—</div></div>
+              <div><div class="tokname" id="tokName">Awaiting scan</div><div class="tokmeta" id="tokMeta">—</div><div class="nologo" id="noLogo"></div></div>
             </div>
             <div id="offBadge"></div>
             <div class="gauge">
@@ -554,7 +559,9 @@ async function scan(q){
       pv.impersonation=!pv.official&&(STOCK_SYMS.has(pair.baseToken.symbol.trim().toUpperCase())||/robinhood token/i.test(pair.baseToken.name||''));
       if(pv.impersonation)log('Warning: name/ticker matches an official Stock Token but it was not deployed by Robinhood StockFactory','bad')}
     const res=scoreToken(pair,sec,pv);
-    current={pair,sec,res,chain,ca,pv};
+    current={pair,sec,res,chain,ca,pv,logo:logoCache[ca.toLowerCase()]||safeImg(pair.info?.imageUrl)};
+    if(pv&&!$('tokIcon').dataset.logo)setIcon($('tokIcon'),logoList(pair,pv),pair.baseToken.symbol,ca);
+    $('noLogo').textContent=pv&&!logoList(pair,pv).length?'No verified logo on DexScreener or the explorer':'';
     renderSecurity(chain,sec,secErr);renderScore(res);renderDesk();renderOrigin(pair,pv,pvErr);setShare(pair,res);remember();
     $('scanTime').textContent='Scanned '+now()+' · '+(CHAIN_NAME[chain]||chain);
     log(`Verdict: ${res.verdict} (${res.score}/100)`,res.cls==='b-safe'?'ok':res.cls==='b-caut'?'warn':'bad');
@@ -669,7 +676,7 @@ function scoreToken(pair,s,pv){
 /* ---------- renderers ---------- */
 function renderMarket(p){
   const b=p.baseToken;
-  $('tokIcon').textContent=(b.symbol||'?').slice(0,4);
+  setIcon($('tokIcon'),logoList(p),b.symbol,b.address);
   $('tokName').textContent=`${b.name||b.symbol} · $${b.symbol}`;
   $('tokMeta').textContent=`${CHAIN_NAME[p.chainId]||p.chainId} · ${p.dexId} · ${short(b.address)}`;
   $('sPrice').textContent=price(p.priceUsd);
@@ -783,7 +790,8 @@ async function ticker(){
     const d=await getJSON('https://api.dexscreener.com/latest/dex/tokens/'+QUICK.map(q=>q.ca).join(','),'Ticker');
     const items=QUICK.map(q=>{const p=bestPair((d.pairs||[]).filter(x=>x.baseToken?.address?.toLowerCase()===q.ca.toLowerCase()));
       if(!p)return '';const c=p.priceChange?.h24;
-      return `<span><b>$${esc(q.sym)}</b> ${esc(price(p.priceUsd))} <span class="${c>0?'up':'dn'}">${esc(pct(c))}</span> · liq ${esc(usd(p.liquidity?.usd))} · vol ${esc(usd(p.volume?.h24))}</span>`}).filter(Boolean);
+      const lg=safeImg(p.info?.imageUrl);if(lg){logoCache[q.ca.toLowerCase()]=lg;const chip=document.querySelector(`.chip[data-ca="${q.ca}"]`);if(chip&&!chip.querySelector('img'))chip.insertAdjacentHTML('afterbegin',miniLogo(lg,q.sym,q.ca))}
+      return `<span>${miniLogo(lg,q.sym,q.ca)}<b>$${esc(q.sym)}</b> ${esc(price(p.priceUsd))} <span class="${c>0?'up':'dn'}">${esc(pct(c))}</span> · liq ${esc(usd(p.liquidity?.usd))} · vol ${esc(usd(p.volume?.h24))}</span>`}).filter(Boolean);
     if(current){const p=current.pair;items.push(`<span><b>LAST SCAN</b> $${esc(p.baseToken.symbol)} · score ${current.res.score} · ${esc(current.res.verdict)}</span>`)}
     items.push(`<span><b>SOURCES</b> DexScreener · GoPlus Security · ${esc(now())}</span>`);
     $('ticker').innerHTML=items.join('')+items.join('');
@@ -833,14 +841,32 @@ $('wEvm').onclick=async()=>{const eth=window.ethereum;
     catch(e){if(e&&e.code===4902)await eth.request({method:'wallet_addEthereumChain',params:[{chainId:'0x1237',chainName:'Robinhood Chain',nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},rpcUrls:['https://rpc.mainnet.chain.robinhood.com'],blockExplorerUrls:['https://robinhoodchain.blockscout.com']}]})}
     signed(a)}catch(e){$('signStatus').textContent=e.message||'Request rejected';$('signStatus').className='status err'}};
 
+
+/* ---------- real token logos: DexScreener -> Blockscout/CoinGecko -> Robinhood CDN -> monogram ---------- */
+const safeImg=u=>typeof u==='string'&&/^https:\/\/[^\s"'<>]+$/.test(u)?u:'';
+const logoCache={};
+function logoList(p,pv){const ca=p.baseToken.address.toLowerCase();
+  const l=[safeImg(p.info?.imageUrl),safeImg(pv?.icon),pv?.official?`https://cdn.robinhood.com/ncw_assets/logos/${ca}.png`:'',logoCache[ca]].filter(Boolean);return [...new Set(l)]}
+function mono(sym,ca){let h=0;for(const ch of (ca||sym||'x'))h=(h*31+ch.charCodeAt(0))%360;return {txt:(sym||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase()||'?',bg:`hsl(${h} 18% 22%)`}}
+function setIcon(el,list,sym,ca){
+  el.innerHTML='';const m=mono(sym,ca);el.style.background=m.bg;el.title='';
+  const fallback=()=>{el.innerHTML='';el.textContent=m.txt;el.dataset.logo=''};
+  const tryAt=i=>{if(i>=list.length)return fallback();const img=new Image();img.alt='';img.decoding='async';img.referrerPolicy='no-referrer';
+    img.onload=()=>{el.innerHTML='';el.appendChild(img);el.style.background='var(--carbon2)';el.dataset.logo=list[i];logoCache[(ca||'').toLowerCase()]=list[i];if(el.id==='tokIcon'&&current&&current.ca.toLowerCase()===(ca||'').toLowerCase()){current.logo=list[i];remember()}};
+    img.onerror=()=>tryAt(i+1);img.src=list[i]};
+  fallback();tryAt(0);
+}
+const miniLogo=(u,sym,ca)=>{const s=safeImg(u);const m=mono(sym,ca);return s?`<img class="mini" src="${esc(s)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'mini mono-m',textContent:'${esc(m.txt)}'}))">`:`<span class="mini mono-m" style="background:${m.bg}">${esc(m.txt)}</span>`};
+
 /* ---------- provenance: official stock tokens, token age, deployer history (Blockscout) ---------- */
 const BS='https://robinhoodchain.blockscout.com/api/v2';
 const STOCK_FACTORY='0x4783c67b63de2b358ac5951a7d41f47a38f3c046';
 const STOCK_SYMS=new Set('TSLA NVDA AAPL MSFT AMZN GOOGL GOOG META COIN SPCX SPY QQQ PLTR AVGO MU INTC SKHY APP AVAV AXON AXTI NFLX LLY DELL HOOD AMD CRCL MSTR USAR CBRS CCL CELH CLSK ELF LITE NNE PENG ORCL IBM JPM V MA WMT DIS BA UBER SHOP SNOW ARM TSM ASML SMCI'.split(' '));
 async function provenance(ca){
-  const o={};
+  const o={};let jobsIcon=Promise.resolve();
   const a=await getJSON(`${BS}/addresses/${ca}`,'Blockscout');
   o.creator=a.creator_address_hash||'';o.tokenScam=!!a.is_scam;
+  jobsIcon=getJSON(`${BS}/tokens/${ca}`,'Blockscout').then(t=>{o.icon=safeImg(t.icon_url);o.bsHolders=num(t.holders_count)}).catch(()=>{});
   o.official=o.creator.toLowerCase()===STOCK_FACTORY;
   const jobs=[];
   if(a.creation_transaction_hash)jobs.push(getJSON(`${BS}/transactions/${a.creation_transaction_hash}`,'Blockscout').then(t=>{o.createdAt=Date.parse(t.timestamp)||null}).catch(()=>{}));
@@ -851,7 +877,7 @@ async function provenance(ca){
       o.deployed=it.filter(x=>x.created_contract).length;o.deployedPartial=!!t.next_page_params;
       const ts=it.map(x=>Date.parse(x.timestamp)).filter(Boolean);o.firstSeen=ts.length&&!t.next_page_params?Math.min(...ts):null}).catch(()=>{}));
   }
-  await Promise.all(jobs);
+  await Promise.all([...jobs,jobsIcon]);
   return o;
 }
 const ago=ms=>{if(!ms)return '—';const s=(Date.now()-ms)/1000;if(s<3600)return Math.max(1,Math.round(s/60))+' min';if(s<86400)return Math.round(s/3600)+' h';return Math.round(s/86400)+' d'};
@@ -892,7 +918,7 @@ let wallet='';
 const store={key:w=>'omen:v1:'+((w??wallet)||'guest').toLowerCase(),
   get(w){try{const v=JSON.parse(localStorage.getItem(this.key(w)));return v&&v.watch?v:{watch:[],hist:[]}}catch(e){return {watch:[],hist:[]}}},
   set(v){try{localStorage.setItem(this.key(),JSON.stringify(v))}catch(e){}}};
-const entry=c=>({ca:c.ca,sym:c.pair.baseToken.symbol,score:c.res.score,cls:c.res.cls,t:Date.now()});
+const entry=c=>({ca:c.ca,sym:c.pair.baseToken.symbol,score:c.res.score,cls:c.res.cls,t:Date.now(),logo:c.logo||''});
 function remember(){if(!current)return;const s=store.get();const e=entry(current);
   s.hist=[e,...s.hist.filter(x=>x.ca.toLowerCase()!==e.ca.toLowerCase())].slice(0,20);
   s.watch=s.watch.map(x=>x.ca.toLowerCase()===e.ca.toLowerCase()?{...e}:x);store.set(s);renderMine()}
@@ -901,16 +927,13 @@ function toggleWatch(){if(!current)return;const s=store.get();const i=s.watch.fi
 $('watchBtn').onclick=toggleWatch;
 function renderMine(){const s=store.get();
   const dot=c=>c==='b-safe'?'var(--sage)':c==='b-caut'?'var(--amber)':'var(--crimson)';
-  const li=x=>`<li><button class="mine" data-ca="${esc(x.ca)}"><span><b>$${esc(x.sym)}</b> <span style="color:var(--dim)">${esc(short(x.ca))}</span></span><span class="num" style="color:${dot(x.cls)}">${esc(x.score)}</span><span style="color:var(--dim)">${esc(ago(x.t))}</span></button></li>`;
+  const li=x=>`<li><button class="mine" data-ca="${esc(x.ca)}"><span style="display:flex;align-items:center;min-width:0">${miniLogo(x.logo,x.sym,x.ca)}<b>$${esc(x.sym)}</b>&nbsp;<span style="color:var(--dim)">${esc(short(x.ca))}</span></span><span class="num" style="color:${dot(x.cls)}">${esc(x.score)}</span><span style="color:var(--dim)">${esc(ago(x.t))}</span></button></li>`;
   $('watchList').innerHTML=s.watch.length?s.watch.map(li).join(''):'<li class="fine">Nothing yet. Press ☆ Watch on any scan.</li>';
   $('histList').innerHTML=s.hist.length?s.hist.map(li).join(''):'<li class="fine">Your scans will appear here.</li>';
   $('mineWho').textContent=wallet?'Saved on this device for '+short(wallet):'Saved on this device · Sign In to keep a list per wallet';
   const on=current&&s.watch.some(x=>x.ca.toLowerCase()===current.ca.toLowerCase());$('watchBtn').textContent=on?'★ Watching':'☆ Watch';$('watchBtn').setAttribute('aria-pressed',!!on)}
 document.addEventListener('click',e=>{const b=e.target.closest('.mine');if(b){$('caInput').value=b.dataset.ca;scan(b.dataset.ca);go('#dashboard')}});
 $('clearHist').onclick=()=>{const s=store.get();s.hist=[];store.set(s);renderMine()};
-
-/* ---------- engine hooks for wallet.js ---------- */
-window.normalize=normalize;window.scoreToken=scoreToken;window.provenance=provenance;
 
 /* ---------- wiring ---------- */
 $('scanForm').addEventListener('submit',e=>{e.preventDefault();scan($('caInput').value)});
@@ -922,6 +945,5 @@ scan(first).then(ticker);
 setInterval(ticker,60000);
 }
 </script>
-<script src="/wallet.js" defer></script>
 </body>
 </html>
