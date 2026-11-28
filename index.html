@@ -971,6 +971,9 @@ function renderMine(){const s=store.get();
 document.addEventListener('click',e=>{const b=e.target.closest('.mine');if(b){$('caInput').value=b.dataset.ca;scan(b.dataset.ca);go('#dashboard')}});
 $('clearHist').onclick=()=>{const s=store.get();s.hist=[];store.set(s);renderMine()};
 
+/* ---------- engine hooks for wallet.js ---------- */
+window.normalize=normalize;window.scoreToken=scoreToken;window.provenance=provenance;
+
 /* ---------- wiring ---------- */
 $('scanForm').addEventListener('submit',e=>{e.preventDefault();scan($('caInput').value)});
 document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{$('caInput').value=b.dataset.ca;scan(b.dataset.ca)});
@@ -981,5 +984,6 @@ scan(first).then(ticker);
 setInterval(ticker,60000);
 }
 </script>
+<script src="/wallet.js" defer></script>
 </body>
 </html>
